@@ -1,0 +1,25 @@
+{
+    "image": "ghcr.io/sondreomar/splunk-devcontainer:latest",
+    "postCreateCommand": "echo 'reload(){ curl -k -u admin:changeme https://localhost:8089/servicesNS/nobody/system/apps/local/example_app/_reload; }' >> ~/.bash_aliases",
+    "mounts": [
+        "source=${localWorkspaceFolder}/example_app,target=/opt/splunk/etc/apps/example_app,type=bind,consistency=cached"
+    ],
+    "customizations": {
+        "vscode": {
+            "settings": {
+                "splunk.spec.FilePath": "/opt/splunk/etc/system/README/",
+                "python.defaultInterpreterPath": "/opt/splunk/bin/python3",
+                "ruff.interpreter": [
+                    "/opt/splunk/bin/python3"
+                ]
+            },
+            "extensions": [
+                "Splunk.splunk",
+                "arcsector.vscode-splunk-search-syntax",
+                "ms-python.python",
+                "ms-python.vscode-pylance",
+                "charliermarsh.ruff"
+            ]
+        }
+    }
+}

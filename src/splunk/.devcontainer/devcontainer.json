@@ -1,0 +1,40 @@
+{
+    "build": {
+        "dockerfile": "./Dockerfile",
+        "context": ".",
+        "args": {
+            "SPLUNK_VERSION": "${localEnv:SPLUNK_VERSION}",
+            "SPLUNK_BUILD": "${localEnv:SPLUNK_BUILD}",
+            "SPLUNK_PLATFORM": "${localEnv:SPLUNK_PLATFORM}"
+        }
+    },
+    "overrideCommand": false,
+    "containerEnv": {
+        "SPLUNK_START_ARGS": "--accept-license",
+        "SPLUNK_PASSWORD": "splunkdev"
+    },
+    "features": {
+        "ghcr.io/devcontainers/features/common-utils:2": {
+            "installZsh": "true",
+            "username": "splunk",
+            "userUid": "1000",
+            "userGid": "1000",
+            "upgradePackages": "false"
+        },
+        "ghcr.io/devcontainers/features/git:1": {}
+    },
+    "remoteUser": "splunk",
+    "portsAttributes": {
+        "8000": {
+            "label": "Splunk Web",
+            "onAutoForward": "notify"
+        },
+        "8089": {
+            "label": "Splunk API",
+            "onAutoForward": "silent"
+        }
+    },
+    "otherPortsAttributes": {
+        "onAutoForward": "ignore"
+    }
+}

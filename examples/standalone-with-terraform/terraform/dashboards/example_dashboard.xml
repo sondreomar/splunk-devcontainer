@@ -1,0 +1,14 @@
+<form version="1.1" theme="dark" hideFilters="true">
+  <label>Terraform Example</label>
+  <description></description>
+  <row>
+    <panel>
+      <table>
+        <search ref="example_search">
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+      </table>
+    </panel>
+  </row>
+</form>

@@ -1,0 +1,193 @@
+name: Build and push Splunk devcontainer image
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/build.yml
+      - src/**
+
+concurrency: build
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  PRIMARY_VARIANT: splunk
+  VERSIONS: |
+    [
+      "9.3.2",
+      "9.3.3",
+      "9.3.4",
+      "9.3.5",
+      "9.3.6",
+      "9.4.0",
+      "9.4.1",
+      "9.4.2",
+      "9.4.3",
+      "9.4.4",
+      "10.0.0",
+      "10.0.1"
+    ]
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      versions: ${{ steps.semver.outputs.versions }}
+      latest: ${{ steps.semver.outputs.latest }}
+      major: ${{ steps.semver.outputs.major }}
+      minor: ${{ steps.semver.outputs.minor }}
+
+    steps:
+      - name: Determine semver tags
+        id: semver
+        run: |
+          versions=$(echo '${{ env.VERSIONS }}' | jq -c .)
+
+          latest=$(echo "$versions" | jq -r '.[]' | sort -V | tail -1)
+          major=$(echo "$versions" | jq -c 'group_by(split(".")[0]) | map({(max): .[0] | split(".")[0]}) | add')
+          minor=$(echo "$versions" | jq -c 'group_by(split(".")[0:2] | join(".")) | map({(max): .[0] | split(".")[0:2] | join(".")}) | add')
+
+          # Debug output
+          echo "All versions:"
+          echo "$versions" | jq .
+          echo "Latest version: $latest"
+          echo "Major version mappings:"
+          echo "$major" | jq .
+          echo "Minor version mappings:"
+          echo "$minor" | jq .
+
+          echo "versions=$versions" >> $GITHUB_OUTPUT
+          echo "latest=$latest" >> $GITHUB_OUTPUT
+          echo "major=$major" >> $GITHUB_OUTPUT
+          echo "minor=$minor" >> $GITHUB_OUTPUT
+
+  build-and-push:
+    needs: prepare
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [splunk, universalforwarder]
+        version: ${{ fromJson(needs.prepare.outputs.versions) }}
+        include:
+          - variant: splunk
+            suffix: ""
+          - variant: universalforwarder
+            suffix: "-uf"
+          - version: 9.3.2
+            build: d8bb32809498
+            platform: Linux-x86_64
+          - version: 9.3.3
+            build: 75595d8f83ef
+            platform: Linux-x86_64
+          - version: 9.3.4
+            build: 30e72d3fb5f7
+            platform: Linux-x86_64
+          - version: 9.3.5
+            build: 9848f25c9430
+            platform: Linux-x86_64
+          - version: 9.3.6
+            build: 8c495c6a1f7d
+            platform: Linux-x86_64
+          - version: 9.4.0
+            build: 6b4ebe426ca6
+            platform: linux-amd64
+          - version: 9.4.1
+            build: e3bdab203ac8
+            platform: linux-amd64
+          - version: 9.4.2
+            build: e9664af3d956
+            platform: linux-amd64
+          - version: 9.4.3
+            build: 237ebbd22314
+            platform: linux-amd64
+          - version: 9.4.4
+            build: f627d88b766b
+            platform: linux-amd64
+          - version: 10.0.0
+            build: e8eb0c4654f8
+            platform: linux-amd64
+          - version: 10.0.1
+            build: c486717c322b
+            platform: linux-amd64
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "20.19.4"
+
+      - name: Setup Dev Container CLI
+        run: npm install -g @devcontainers/cli@0.80.0
+
+      - name: Ensure lower case image name
+        run: echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
+        env:
+          IMAGE_NAME: ${{ env.IMAGE_NAME }}
+
+      - name: Build devcontainer image
+        env:
+          SPLUNK_VERSION: ${{ matrix.version }}
+          SPLUNK_BUILD: ${{ matrix.build }}
+          SPLUNK_PLATFORM: ${{ matrix.platform }}
+          IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          MINOR: ${{ fromJson(needs.prepare.outputs.minor)[matrix.version] || '' }}
+          MAJOR: ${{ fromJson(needs.prepare.outputs.major)[matrix.version] || '' }}
+          LATEST: ${{ matrix.version == needs.prepare.outputs.latest && 'latest' || '' }}
+        run: |
+          devcontainer build \
+            --workspace-folder ${{ github.workspace }}/src/${{ matrix.variant }} \
+            --image-name ${{ env.IMAGE_REF }}:${{ matrix.version }}${{ matrix.suffix }} \
+            ${{ env.LATEST && format('--image-name {0}:{1}{2}', env.IMAGE_REF, env.LATEST, matrix.suffix) || '' }} \
+            ${{ env.MAJOR && format('--image-name {0}:{1}{2}', env.IMAGE_REF, env.MAJOR, matrix.suffix) || '' }} \
+            ${{ env.MINOR && format('--image-name {0}:{1}{2}', env.IMAGE_REF, env.MINOR, matrix.suffix) || '' }} \
+            --cache-from type=registry,ref=${{ env.IMAGE_REF }}:${{ matrix.version }}${{ matrix.suffix }} \
+            --cache-to type=inline,ref=${{ env.IMAGE_REF }}:${{ matrix.version }}${{ matrix.suffix }}
+
+      - name: Push devcontainer image
+        run: |
+          docker push --all-tags ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+
+  delete-untagged-images:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+
+    steps:
+      - name: Trim repository owner from image name
+        run: echo "IMAGE_NAME=$( basename ${{ env.IMAGE_NAME }} )" >>${GITHUB_ENV}
+
+      - name: Delete untagged images
+        uses: actions/delete-package-versions@e5bc658cc4c965c472efe991f8beea3981499c55 # v5.0.0
+        env:
+          PACKAGE_NAME: ${{ env.IMAGE_NAME }}
+        with:
+          package-type: container
+          package-name: ${{ env.PACKAGE_NAME }}
+          delete-only-untagged-versions: true
+          token: ${{ secrets.GITHUB_TOKEN }}

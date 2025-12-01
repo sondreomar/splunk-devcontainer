@@ -1,0 +1,6 @@
+{
+    "image": "ghcr.io/sondreomar/splunk-devcontainer:latest",
+    "containerEnv": {
+        "SPLUNK_PASSWORD": "test1234"
+    }
+}

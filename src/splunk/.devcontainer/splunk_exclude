@@ -1,0 +1,11 @@
+*/etc/apps/python_upgrade_readiness_app*
+*/etc/apps/sample_app*
+*/etc/apps/splunk-rolling-upgrade*
+*/etc/apps/splunk-visual-exporter*
+*/etc/apps/splunk_archiver*
+*/etc/apps/splunk_assist*
+*/etc/apps/splunk_instrumentation*
+*/etc/apps/splunk_metrics_workspace*
+*/etc/apps/splunk_monitoring_console*
+*/etc/apps/splunk_rapid_diag*
+*/etc/apps/splunk_secure_gateway*

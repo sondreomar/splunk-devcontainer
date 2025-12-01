@@ -1,0 +1,76 @@
+networks:
+  splunknet:
+    driver: bridge
+    attachable: true
+
+services:
+  sh1:
+    image: ghcr.io/sondreomar/splunk-devcontainer:latest
+    hostname: sh1
+    container_name: sh1
+    networks:
+      splunknet:
+        aliases:
+          - sh1
+    ports:
+      - 8000:8000
+    volumes:
+      - ..:/workspace
+      - ../sh:/opt/splunk/etc/apps/sh
+
+  sh2:
+    image: ghcr.io/sondreomar/splunk-devcontainer:latest
+    hostname: sh2
+    container_name: sh2
+    networks:
+      splunknet:
+        aliases:
+          - sh2
+    ports:
+      - 18000:8000
+    volumes:
+      - ../sh:/opt/splunk/etc/apps/sh
+
+  hf1:
+    image: ghcr.io/sondreomar/splunk-devcontainer:latest
+    hostname: hf1
+    container_name: hf1
+    networks:
+      splunknet:
+        aliases:
+          - hf1
+    volumes:
+      - ../hf:/opt/splunk/etc/apps/hf
+
+  hf2:
+    image: ghcr.io/sondreomar/splunk-devcontainer:latest
+    hostname: hf2
+    container_name: hf2
+    networks:
+      splunknet:
+        aliases:
+          - hf2
+    volumes:
+      - ../hf:/opt/splunk/etc/apps/hf
+
+  uf-a-1:
+    image: ghcr.io/sondreomar/splunk-devcontainer:latest-uf
+    hostname: uf-a-1
+    container_name: uf-a-1
+    networks:
+      splunknet:
+        aliases:
+          - uf-a-1
+    volumes:
+      - ../uf:/opt/splunkforwarder/etc/apps/uf
+
+  uf-b-1:
+    image: ghcr.io/sondreomar/splunk-devcontainer:latest-uf
+    hostname: uf-b-1
+    container_name: uf-b-1
+    networks:
+      splunknet:
+        aliases:
+          - uf-b-1
+    volumes:
+      - ../uf:/opt/splunkforwarder/etc/apps/uf
