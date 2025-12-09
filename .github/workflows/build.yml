@@ -127,6 +127,19 @@ jobs:
             platform: linux-amd64
 
     steps:
+      - name: Reclaim ubuntu-latest runner disk space
+        run: |
+          echo "Disk usage before cleanup:"
+          df . -h
+          sudo rm -rf \
+            /usr/share/swift \
+            /usr/share/dotnet \
+            /usr/local/lib/android \
+            /opt/hostedtoolcache/CodeQL \
+            /opt/hostedtoolcache/go
+          echo "Disk usage after cleanup:"
+          df . -h
+
       - name: Checkout repository
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
