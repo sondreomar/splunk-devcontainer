@@ -3,26 +3,20 @@
     "dockerComposeFile": "docker-compose.yml",
     "service": "sh1",
     "workspaceFolder": "/workspace",
-    "postCreateCommand": "echo 'restart(){ curl -k -u admin:changeme https://$1:8089/services/server/control/restart -X POST; }' >> ~/.bash_aliases",
-    "otherPortsAttributes": {
-        "onAutoForward": "ignore"
+    "postCreateCommand": "zsh .devcontainer/post_create.sh",
+    "features": {
+        "ghcr.io/devcontainers/features/docker-outside-of-docker": {
+            "dockerDashComposeVersion": "none"
+        }
     },
     "customizations": {
         "vscode": {
             "settings": {
-                "splunk.spec.FilePath": "/opt/splunk/etc/system/README/",
-                "python.defaultInterpreterPath": "/opt/splunk/bin/python3",
-                "ruff.interpreter": [
-                    "/opt/splunk/bin/python3"
-                ]
+                "splunk.spec.FilePath": "/opt/splunk/etc/system/README/"
             },
             "extensions": [
                 "ms-azuretools.vscode-docker",
                 "Splunk.splunk",
-                "arcsector.vscode-splunk-search-syntax",
-                "ms-python.python",
-                "ms-python.vscode-pylance",
-                "charliermarsh.ruff",
                 "GitHub.copilot",
                 "GitHub.copilot-chat"
             ]
