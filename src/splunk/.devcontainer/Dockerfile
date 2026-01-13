@@ -39,6 +39,8 @@ VOLUME [ "${SPLUNK_HOME}/etc", "${SPLUNK_HOME}/var" ]
 ARG UID=1000
 ARG GID=1000
 
+COPY ["99-splunk-ulimits.conf", "/etc/security/limits.d/"]
+
 RUN groupadd -r -g ${GID} ${SPLUNK_GROUP} \
     && useradd -r -m -u ${UID} -g ${GID} -d ${SPLUNK_HOME} -s /bin/bash ${SPLUNK_USER} \
     && mkdir -p ${SPLUNK_HOME}/var \
