@@ -1,6 +1,7 @@
 services:
   sh1:
     hostname: sh1
+    container_name: dc-sh1
     image: ghcr.io/sondreomar/splunk-devcontainer:latest
     volumes:
       - ..:/workspace
@@ -8,16 +9,19 @@ services:
 
   hf1:
     hostname: hf1
+    container_name: dc-hf1
     image: ghcr.io/sondreomar/splunk-devcontainer:latest
     volumes: [../hf:/opt/splunk/etc/apps/hf]
 
   hf2:
     hostname: hf2
+    container_name: dc-hf2
     image: ghcr.io/sondreomar/splunk-devcontainer:latest
     volumes: [../hf:/opt/splunk/etc/apps/hf]
 
   uf1:
     hostname: uf1
+    container_name: dc-uf1
     build:
       context: .
       dockerfile: uf-with-python.Dockerfile
@@ -25,6 +29,7 @@ services:
 
   uf2:
     hostname: uf2
+    container_name: dc-uf2
     build:
       context: .
       dockerfile: uf-with-python.Dockerfile
