@@ -6,6 +6,4 @@
 */etc/apps/splunk_assist*
 */etc/apps/splunk_instrumentation*
 */etc/apps/splunk_metrics_workspace*
-*/etc/apps/splunk_monitoring_console*
-*/etc/apps/splunk_rapid_diag*
 */etc/apps/splunk_secure_gateway*
