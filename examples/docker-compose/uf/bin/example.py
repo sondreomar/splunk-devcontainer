@@ -1,10 +1,10 @@
-import hashlib
 import logging
 import random
+import string
 import time
 
 logging.basicConfig(
-    filename="/tmp/testdata.log",
+    filename="/tmp/example.log",
     format="%(asctime)s.%(msecs)03d [%(levelname)s] %(message)s",
     datefmt="%Y-%m-%dT%H:%M:%S",
     level=logging.INFO,
@@ -12,7 +12,7 @@ logging.basicConfig(
 
 single_line = "single {n}"
 multi_line = "multi-1 {n}\nmulti-2 {n}"
-long_event = "long {n} " + (hashlib.sha512(single_line.encode()).hexdigest() * 128) + " eol {n}"
+long_event = "long {n} " + "".join(random.choices(string.ascii_letters, k=1000)) + " eol {n}"
 
 events = random.choices(
     [single_line, multi_line, long_event],
