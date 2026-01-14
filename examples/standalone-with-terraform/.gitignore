@@ -1,5 +1,4 @@
 .terraform
-.*.lock.hcl
 *.plan
 *.tfplan
 *.tfstate
