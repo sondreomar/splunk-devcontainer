@@ -1,6 +1,10 @@
 terraform {
   required_version = ">= 1.3"
 
+  backend "local" {
+    path = "/tmp/terraform.tfstate"
+  }
+
   required_providers {
     splunk = {
       source = "splunk/splunk"

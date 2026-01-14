@@ -1,26 +1,17 @@
 {
     "name": "splunk",
     "image": "ghcr.io/sondreomar/splunk-devcontainer:latest",
+    "postCreateCommand": "terraform init",
     "features": {
         "ghcr.io/devcontainers/features/terraform": {}
     },
+    "containerEnv": {
+        "TF_DATA_DIR": "/tmp/.terraform"
+    },
     "customizations": {
         "vscode": {
-            "settings": {
-                "splunk.spec.FilePath": "/opt/splunk/etc/system/README/",
-                "python.defaultInterpreterPath": "/opt/splunk/bin/python3",
-                "ruff.interpreter": [
-                    "/opt/splunk/bin/python3"
-                ]
-            },
             "extensions": [
-                "Splunk.splunk",
-                "arcsector.vscode-splunk-search-syntax",
-                "ms-python.python",
-                "ms-python.vscode-pylance",
-                "charliermarsh.ruff",
-                "hashicorp.terraform",
-                "-ms-azuretools.vscode-azureterraform" // excludes deprecated extension from terraform feature
+                "hashicorp.terraform"
             ]
         }
     }
