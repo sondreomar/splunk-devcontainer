@@ -23,7 +23,6 @@ services:
     hostname: uf1
     container_name: dc-uf1
     build:
-      context: .
       dockerfile: uf-with-python.Dockerfile
     volumes: [../uf:/opt/splunkforwarder/etc/apps/uf]
 
@@ -31,6 +30,5 @@ services:
     hostname: uf2
     container_name: dc-uf2
     build:
-      context: .
       dockerfile: uf-with-python.Dockerfile
     volumes: [../uf:/opt/splunkforwarder/etc/apps/uf]
