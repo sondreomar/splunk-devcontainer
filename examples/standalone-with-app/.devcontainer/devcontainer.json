@@ -1,6 +1,6 @@
 {
     "image": "ghcr.io/sondreomar/splunk-devcontainer:latest",
-    "postCreateCommand": "cat .devcontainer/aliases.zsh >> ~/.oh-my-zsh/custom/aliases.zsh",
+    "postCreateCommand": "cat .devcontainer/reload.zsh >> ~/.oh-my-zsh/custom/reload.zsh",
     "mounts": [
         {
             "source": "${localWorkspaceFolder}/example_app",

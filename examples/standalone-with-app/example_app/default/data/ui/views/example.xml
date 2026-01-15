@@ -4,7 +4,8 @@
   <row>
     <panel>
       <event>
-        <search ref="example_search">
+        <search>
+          <query>index=main</query>
           <earliest>-24h@h</earliest>
           <latest>now</latest>
         </search>

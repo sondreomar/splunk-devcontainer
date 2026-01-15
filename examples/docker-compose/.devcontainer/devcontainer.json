@@ -3,7 +3,7 @@
     "dockerComposeFile": "docker-compose.yml",
     "service": "sh1",
     "workspaceFolder": "/workspace",
-    "postCreateCommand": "cat .devcontainer/aliases.zsh >> ~/.oh-my-zsh/custom/aliases.zsh",
+    "postCreateCommand": "cat .devcontainer/restart.zsh >> ~/.oh-my-zsh/custom/restart.zsh",
     "features": {
         "ghcr.io/devcontainers/features/docker-outside-of-docker": {
             "dockerDashComposeVersion": "none"
