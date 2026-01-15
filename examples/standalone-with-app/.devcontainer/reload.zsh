@@ -1,0 +1,1 @@
+reload(){ curl -k -u admin:$SPLUNK_PASSWORD https://localhost:8089/servicesNS/nobody/system/apps/local/example_app/_reload; }

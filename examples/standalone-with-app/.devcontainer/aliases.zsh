@@ -1,1 +1,0 @@
-reload(){ curl -k -u admin:splunkdev https://localhost:8089/servicesNS/nobody/system/apps/local/example_app/_reload; }
