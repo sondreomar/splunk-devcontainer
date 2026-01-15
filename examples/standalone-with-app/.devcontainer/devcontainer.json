@@ -2,7 +2,11 @@
     "image": "ghcr.io/sondreomar/splunk-devcontainer:latest",
     "postCreateCommand": "cat .devcontainer/aliases.zsh >> ~/.oh-my-zsh/custom/aliases.zsh",
     "mounts": [
-        "source=${localWorkspaceFolder}/example_app,target=/opt/splunk/etc/apps/example_app,type=bind,consistency=cached"
+        {
+            "source": "${localWorkspaceFolder}/example_app",
+            "target": "/opt/splunk/etc/apps/example_app",
+            "type": "bind"
+        }
     ],
     "customizations": {
         "vscode": {
