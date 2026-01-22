@@ -28,6 +28,20 @@ The image can also be extended with additional devcontainer features, for exampl
 | [splunk](./src/splunk/)                         | Splunk Enterprise          |                | `ghcr.io/sondreomar/splunk-devcontainer:latest`    |
 | [universalforwarder](./src/universalforwarder/) | Splunk Universal Forwarder | -uf            | `ghcr.io/sondreomar/splunk-devcontainer:latest-uf` |
 
+## Image Tags
+
+Images are tagged with both the Splunk version and the devcontainer image version. This allows you to pin to a specific Splunk version while also controlling devcontainer updates.
+
+**Tag formats:**
+
+- `<splunk-version>` - Latest devcontainer image for a specific Splunk version (e.g., `10.2.0`)
+- `<splunk-version>-v<image-version>` - Pinned to specific devcontainer image version (e.g., `10.2.0-v1.0.0`)
+- `<splunk-major>` - Latest Splunk patch version for a major release (e.g., `10`)
+- `<splunk-minor>` - Latest Splunk patch version for a minor release (e.g., `10.2`)
+- `latest` - Latest supported Splunk version with latest devcontainer image
+
+For Universal Forwarder, append `-uf` to any tag (e.g., `10.2.0-uf`, `10.2.0-v1.0.0-uf`).
+
 ## Example Usage
 
 - [**standalone**](./examples/standalone/) - Basic Splunk Enterprise setup
