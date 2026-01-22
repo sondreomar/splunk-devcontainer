@@ -43,14 +43,29 @@ jobs:
     permissions:
       contents: read
     outputs:
-      versions: ${{ steps.semver.outputs.versions }}
-      latest: ${{ steps.semver.outputs.latest }}
-      major: ${{ steps.semver.outputs.major }}
-      minor: ${{ steps.semver.outputs.minor }}
+      image_version: ${{ steps.image_semver.outputs.version }}
+      image_major: ${{ steps.image_semver.outputs.major }}
+      image_minor: ${{ steps.image_semver.outputs.minor }}
+      splunk_versions: ${{ steps.splunk_semver.outputs.versions }}
+      splunk_latest: ${{ steps.splunk_semver.outputs.latest }}
+      splunk_major: ${{ steps.splunk_semver.outputs.major }}
+      splunk_minor: ${{ steps.splunk_semver.outputs.minor }}
 
     steps:
-      - name: Determine semver tags
-        id: semver
+      - name: Determine image version tags
+        id: image_semver
+        run: |
+          # Extract version from tag (v1.0.0 -> 1.0.0)
+          version="${GITHUB_REF#refs/tags/v}"
+          major=$(echo "$version" | cut -d. -f1)
+          minor=$(echo "$version" | cut -d. -f1-2)
+
+          echo "version=$version" >> $GITHUB_OUTPUT
+          echo "major=$major" >> $GITHUB_OUTPUT
+          echo "minor=$minor" >> $GITHUB_OUTPUT
+
+      - name: Determine splunk version tags
+        id: splunk_semver
         run: |
           versions=$(echo '${{ env.VERSIONS }}' | jq -c .)
 
@@ -86,7 +101,7 @@ jobs:
       fail-fast: false
       matrix:
         variant: [splunk, universalforwarder]
-        version: ${{ fromJson(needs.prepare.outputs.versions) }}
+        version: ${{ fromJson(needs.prepare.outputs.splunk_versions) }}
         include:
           - variant: splunk
             suffix: ""
@@ -196,16 +211,28 @@ jobs:
           SPLUNK_BUILD: ${{ matrix.build }}
           SPLUNK_PLATFORM: ${{ matrix.platform }}
           IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          MINOR: ${{ fromJson(needs.prepare.outputs.minor)[matrix.version] || '' }}
-          MAJOR: ${{ fromJson(needs.prepare.outputs.major)[matrix.version] || '' }}
-          LATEST: ${{ matrix.version == needs.prepare.outputs.latest && 'latest' || '' }}
+          SPLUNK_LATEST: ${{ matrix.version == needs.prepare.outputs.splunk_latest && 'true' || '' }}
+          SPLUNK_MAJOR: ${{ fromJson(needs.prepare.outputs.splunk_major)[matrix.version] || '' }}
+          SPLUNK_MINOR: ${{ fromJson(needs.prepare.outputs.splunk_minor)[matrix.version] || '' }}
+          IMAGE_VERSION: ${{ needs.prepare.outputs.image_version }}
+          IMAGE_MAJOR: ${{ needs.prepare.outputs.image_major }}
+          IMAGE_MINOR: ${{ needs.prepare.outputs.image_minor }}
         run: |
           devcontainer build \
             --workspace-folder ${{ github.workspace }}/src/${{ matrix.variant }} \
             --image-name ${{ env.IMAGE_REF }}:${{ matrix.version }}${{ matrix.suffix }} \
-            ${{ env.LATEST && format('--image-name {0}:{1}{2}', env.IMAGE_REF, env.LATEST, matrix.suffix) || '' }} \
-            ${{ env.MAJOR && format('--image-name {0}:{1}{2}', env.IMAGE_REF, env.MAJOR, matrix.suffix) || '' }} \
-            ${{ env.MINOR && format('--image-name {0}:{1}{2}', env.IMAGE_REF, env.MINOR, matrix.suffix) || '' }}
+            --image-name ${{ env.IMAGE_REF }}:${{ matrix.version }}${{ matrix.suffix }}-v${{ env.IMAGE_VERSION }} \
+            --image-name ${{ env.IMAGE_REF }}:${{ matrix.version }}${{ matrix.suffix }}-v${{ env.IMAGE_MINOR }} \
+            --image-name ${{ env.IMAGE_REF }}:${{ matrix.version }}${{ matrix.suffix }}-v${{ env.IMAGE_MAJOR }} \
+            ${{ env.SPLUNK_MINOR && format('--image-name {0}:{1}{2}', env.IMAGE_REF, env.SPLUNK_MINOR, matrix.suffix) || '' }} \
+            ${{ env.SPLUNK_MINOR && format('--image-name {0}:{1}{2}-v{3}', env.IMAGE_REF, env.SPLUNK_MINOR, matrix.suffix, env.IMAGE_VERSION) || '' }} \
+            ${{ env.SPLUNK_MINOR && format('--image-name {0}:{1}{2}-v{3}', env.IMAGE_REF, env.SPLUNK_MINOR, matrix.suffix, env.IMAGE_MINOR) || '' }} \
+            ${{ env.SPLUNK_MINOR && format('--image-name {0}:{1}{2}-v{3}', env.IMAGE_REF, env.SPLUNK_MINOR, matrix.suffix, env.IMAGE_MAJOR) || '' }} \
+            ${{ env.SPLUNK_MAJOR && format('--image-name {0}:{1}{2}', env.IMAGE_REF, env.SPLUNK_MAJOR, matrix.suffix) || '' }} \
+            ${{ env.SPLUNK_MAJOR && format('--image-name {0}:{1}{2}-v{3}', env.IMAGE_REF, env.SPLUNK_MAJOR, matrix.suffix, env.IMAGE_VERSION) || '' }} \
+            ${{ env.SPLUNK_MAJOR && format('--image-name {0}:{1}{2}-v{3}', env.IMAGE_REF, env.SPLUNK_MAJOR, matrix.suffix, env.IMAGE_MINOR) || '' }} \
+            ${{ env.SPLUNK_MAJOR && format('--image-name {0}:{1}{2}-v{3}', env.IMAGE_REF, env.SPLUNK_MAJOR, matrix.suffix, env.IMAGE_MAJOR) || '' }} \
+            ${{ env.SPLUNK_LATEST && format('--image-name {0}:latest{1}', env.IMAGE_REF, matrix.suffix) || '' }}
 
       - name: Push devcontainer image
         run: |
