@@ -39,7 +39,7 @@ env:
 
 jobs:
   prepare:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     permissions:
       contents: read
     outputs:
@@ -74,7 +74,7 @@ jobs:
 
   build-and-push:
     needs: prepare
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     continue-on-error: true
     permissions:
       contents: read
@@ -213,7 +213,7 @@ jobs:
 
   delete-untagged-images:
     needs: build-and-push
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     permissions:
       packages: write
 
