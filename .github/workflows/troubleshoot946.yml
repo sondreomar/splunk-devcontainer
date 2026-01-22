@@ -14,7 +14,7 @@ jobs:
         variant: [splunk, universalforwarder]
         include:
           - version: 9.4.5
-            build: 60284236e579 # test with 9.4.6 build hash
+            build: "60284236e579" # test with 9.4.6 build hash
             platform: linux-amd64
           - version: 9.4.6
             build: 60284236e579
