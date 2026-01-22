@@ -205,9 +205,7 @@ jobs:
             --image-name ${{ env.IMAGE_REF }}:${{ matrix.version }}${{ matrix.suffix }} \
             ${{ env.LATEST && format('--image-name {0}:{1}{2}', env.IMAGE_REF, env.LATEST, matrix.suffix) || '' }} \
             ${{ env.MAJOR && format('--image-name {0}:{1}{2}', env.IMAGE_REF, env.MAJOR, matrix.suffix) || '' }} \
-            ${{ env.MINOR && format('--image-name {0}:{1}{2}', env.IMAGE_REF, env.MINOR, matrix.suffix) || '' }} \
-            --cache-from type=registry,ref=${{ env.IMAGE_REF }}:${{ matrix.version }}${{ matrix.suffix }} \
-            --cache-to type=inline,ref=${{ env.IMAGE_REF }}:${{ matrix.version }}${{ matrix.suffix }}
+            ${{ env.MINOR && format('--image-name {0}:{1}{2}', env.IMAGE_REF, env.MINOR, matrix.suffix) || '' }}
 
       - name: Push devcontainer image
         run: |
