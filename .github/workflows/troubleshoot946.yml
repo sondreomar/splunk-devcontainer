@@ -7,13 +7,25 @@ jobs:
   test-splunk-946:
     runs-on: ubuntu-latest
 
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [splunk, universalforwarder]
+        include:
+          - version: 9.4.5
+            build: 8fb2a6c586a5
+            platform: linux-amd64
+          - version: 9.4.6
+            build: 60284236e579
+            platform: linux-amd64
+
     steps:
-      - name: Echo test
+      - name: Echo versions
         run: |
-          echo "Testing 9.4.6"
-          echo "Version: 9.4.6"
-          echo "Build: 60284236e579"
-          echo "Platform: linux-amd64"
+          echo "Variant: ${{ matrix.variant }}"
+          echo "Version: ${{ matrix.version }}"
+          echo "Build: ${{ matrix.build }}"
+          echo "Platform: ${{ matrix.platform }}"
 
       - name: Checkout
         uses: actions/checkout@v4
