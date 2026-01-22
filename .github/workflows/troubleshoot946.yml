@@ -10,6 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        version: [9.4.5, 9.4.6]
         variant: [splunk, universalforwarder]
         include:
           - version: 9.4.5
@@ -32,5 +33,5 @@ jobs:
 
       - name: Test download
         run: |
-          wget --spider https://download.splunk.com/products/splunk/releases/9.4.6/linux/splunk-9.4.6-60284236e579-linux-amd64.tgz
+          wget --spider "https://download.splunk.com/products/splunk/releases/${{ matrix.version }}/linux/${{ matrix.variant }}-${{ matrix.version }}-${{ matrix.build }}-${{ matrix.platform }}.tgz"
           echo "Download URL is accessible"
