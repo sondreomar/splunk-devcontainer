@@ -2,13 +2,10 @@ name: Build and push Splunk devcontainer image
 
 on:
   push:
-    branches:
-      - main
-    paths:
-      - .github/workflows/build.yml
-      - src/**
+    tags:
+      - v*.*.*
 
-concurrency: build
+concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 env:
   REGISTRY: ghcr.io
