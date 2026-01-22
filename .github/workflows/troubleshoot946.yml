@@ -1,0 +1,24 @@
+name: Test 9.4.6 Only
+
+on:
+  workflow_dispatch: # Manual trigger only
+
+jobs:
+  test-splunk-946:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Echo test
+        run: |
+          echo "Testing 9.4.6"
+          echo "Version: 9.4.6"
+          echo "Build: 60284236e579"
+          echo "Platform: linux-amd64"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Test download
+        run: |
+          wget --spider https://download.splunk.com/products/splunk/releases/9.4.6/linux/splunk-9.4.6-60284236e579-linux-amd64.tgz
+          echo "Download URL is accessible"
