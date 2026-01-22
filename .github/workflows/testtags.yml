@@ -103,61 +103,61 @@ jobs:
           - variant: universalforwarder
             suffix: "-uf"
           - version: 9.3.2
-            build: d8bb32809498
+            build: "d8bb32809498"
             platform: Linux-x86_64
           - version: 9.3.3
-            build: 75595d8f83ef
+            build: "75595d8f83ef"
             platform: Linux-x86_64
           - version: 9.3.4
-            build: 30e72d3fb5f7
+            build: "30e72d3fb5f7"
             platform: Linux-x86_64
           - version: 9.3.5
-            build: 9848f25c9430
+            build: "9848f25c9430"
             platform: Linux-x86_64
           - version: 9.3.6
-            build: 8c495c6a1f7d
+            build: "8c495c6a1f7d"
             platform: Linux-x86_64
           - version: 9.3.7
-            build: d3040138454b
+            build: "d3040138454b"
             platform: Linux-x86_64
           - version: 9.3.8
-            build: fbf0510dff69
+            build: "fbf0510dff69"
             platform: Linux-x86_64
           - version: 9.4.0
-            build: 6b4ebe426ca6
+            build: "6b4ebe426ca6"
             platform: linux-amd64
           - version: 9.4.1
-            build: e3bdab203ac8
+            build: "e3bdab203ac8"
             platform: linux-amd64
           - version: 9.4.2
-            build: e9664af3d956
+            build: "e9664af3d956"
             platform: linux-amd64
           - version: 9.4.3
-            build: 237ebbd22314
+            build: "237ebbd22314"
             platform: linux-amd64
           - version: 9.4.4
-            build: f627d88b766b
+            build: "f627d88b766b"
             platform: linux-amd64
           - version: 9.4.5
-            build: 8fb2a6c586a5
+            build: "8fb2a6c586a5"
             platform: linux-amd64
           - version: 9.4.6
-            build: 60284236e579
+            build: "60284236e579"
             platform: linux-amd64
           - version: 9.4.7
-            build: 2a9293b80994
+            build: "2a9293b80994"
             platform: linux-amd64
           - version: 10.0.0
-            build: e8eb0c4654f8
+            build: "e8eb0c4654f8"
             platform: linux-amd64
           - version: 10.0.1
-            build: c486717c322b
+            build: "c486717c322b"
             platform: linux-amd64
           - version: 10.0.2
-            build: e2d18b4767e9
+            build: "e2d18b4767e9"
             platform: linux-amd64
           - version: 10.2.0
-            build: d749cb17ea65
+            build: "d749cb17ea65"
             platform: linux-amd64
 
     steps:
@@ -172,11 +172,9 @@ jobs:
           SPLUNK_BUILD: ${{ matrix.build }}
           SPLUNK_PLATFORM: ${{ matrix.platform }}
           IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          # Splunk version tags
           SPLUNK_LATEST: ${{ matrix.version == needs.prepare.outputs.splunk_latest && 'true' || '' }}
           SPLUNK_MAJOR: ${{ fromJson(needs.prepare.outputs.splunk_major)[matrix.version] || '' }}
           SPLUNK_MINOR: ${{ fromJson(needs.prepare.outputs.splunk_minor)[matrix.version] || '' }}
-          # Image version tags (from git tag)
           IMAGE_VERSION: ${{ needs.prepare.outputs.image_version }}
           IMAGE_MAJOR: ${{ needs.prepare.outputs.image_major }}
           IMAGE_MINOR: ${{ needs.prepare.outputs.image_minor }}
@@ -196,5 +194,3 @@ jobs:
           echo "  ${{ env.SPLUNK_MAJOR && format('--image-name {0}:{1}{2}-v{3}', env.IMAGE_REF, env.SPLUNK_MAJOR, matrix.suffix, env.IMAGE_MINOR) || '' }}"
           echo "  ${{ env.SPLUNK_MAJOR && format('--image-name {0}:{1}{2}-v{3}', env.IMAGE_REF, env.SPLUNK_MAJOR, matrix.suffix, env.IMAGE_MAJOR) || '' }}"
           echo "  ${{ env.SPLUNK_LATEST && format('--image-name {0}:latest{1}', env.IMAGE_REF, matrix.suffix) || '' }}"
-          echo "  --cache-from type=registry,ref=${{ env.IMAGE_REF }}:${{ matrix.version }}${{ matrix.suffix }}-v${{ env.IMAGE_VERSION }}"
-          echo "  --cache-to type=inline,ref=${{ env.IMAGE_REF }}:${{ matrix.version }}${{ matrix.suffix }}-v${{ env.IMAGE_VERSION }}"
