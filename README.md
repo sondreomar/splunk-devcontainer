@@ -48,6 +48,7 @@ For Universal Forwarder, append `-uf` to any tag (e.g., `10.2.0-uf`, `10.2.0-v1.
 - [**standalone-with-app**](./examples/standalone-with-app/) - Splunk with a custom app mounted
 - [**standalone-with-terraform**](./examples/standalone-with-terraform/) - Splunk managed with Terraform provider
 - [**docker-compose**](./examples/docker-compose/) - Multi-instance Splunk environment
+- [**spl-notebooks**](./examples/spl-notebooks/) - Use SPL and SPL2 Notebooks with the [Splunk Extension](https://marketplace.visualstudio.com/items?itemName=Splunk.splunk)
 
 ## Building from Source
 

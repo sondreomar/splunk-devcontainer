@@ -1,0 +1,1 @@
+[{"kind":2,"language":"splunk_search","value":"index=_internal sourcetype=\"splunkd\"","metadata":{},"outputs":[]}]

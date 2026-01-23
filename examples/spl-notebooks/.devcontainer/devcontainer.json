@@ -1,0 +1,26 @@
+{
+    "image": "ghcr.io/sondreomar/splunk-devcontainer:latest",
+    "postCreateCommand": "bash .devcontainer/get_splunk_token.sh",
+    "customizations": {
+        "vscode": {
+            "settings": {
+                "[splunk_search]": {
+                    "editor.autoIndent": "advanced",
+                    "editor.insertSpaces": true,
+                    "editor.tabSize": 2,
+                    "files.insertFinalNewline": true
+                },
+                "splunk.spec.FilePath": "/opt/splunk/etc/system/README/",
+                "splunk.search.searchOutputMode": "json",
+                "splunk.commands.splunkRestUrl": "https://localhost:8089",
+                "splunk.commands.enableCertificateVerification": false
+            },
+            "extensions": [
+                "Splunk.splunk",
+                "arcsector.vscode-splunk-search-syntax",
+                "GitHub.copilot",
+                "GitHub.copilot-chat"
+            ]
+        }
+    }
+}
