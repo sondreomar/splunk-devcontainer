@@ -1,0 +1,14 @@
+{
+  "modules": [
+    {
+      "name": "module1",
+      "namespace": "",
+      "definition": "$test = SELECT * FROM _internal WHERE sourcetype=\"splunkd\"",
+      "_vscode": {
+        "metadata": {},
+        "outputs": []
+      }
+    }
+  ],
+  "app": "apps.search"
+}
