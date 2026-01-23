@@ -1,5 +1,7 @@
 #!/bin/bash
-until curl -sk https://localhost:8089 -u admin:$SPLUNK_PASSWORD --max-time 5 >/dev/null; do
+set -e
+
+until curl -sk https://localhost:8089 -u "admin:$SPLUNK_PASSWORD" --max-time 5 >/dev/null; do
   echo "Waiting for Splunk to be available..."
   sleep 5
 done
@@ -10,7 +12,7 @@ while [ -z "$token" ] || [ "$token" = "null" ]; do
   response=$(
     curl -sk https://localhost:8089/services/authorization/tokens \
       -H "Content-Type: application/json" \
-      -u admin:$SPLUNK_PASSWORD \
+      -u "admin:$SPLUNK_PASSWORD" \
       -d name=admin \
       -d audience=vscode \
       -d output_mode=json
