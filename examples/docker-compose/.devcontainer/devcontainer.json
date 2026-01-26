@@ -5,7 +5,7 @@
     "workspaceFolder": "/workspace",
     "postCreateCommand": "cat .devcontainer/restart.zsh >> ~/.oh-my-zsh/custom/restart.zsh",
     "features": {
-        "ghcr.io/devcontainers/features/docker-outside-of-docker": {
+        "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
             "dockerDashComposeVersion": "none"
         }
     },
