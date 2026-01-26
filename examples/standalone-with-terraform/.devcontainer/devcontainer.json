@@ -3,7 +3,7 @@
     "image": "ghcr.io/sondreomar/splunk-devcontainer:latest",
     "postCreateCommand": "terraform init",
     "features": {
-        "ghcr.io/devcontainers/features/terraform": {}
+        "ghcr.io/devcontainers/features/terraform:1": {}
     },
     "containerEnv": {
         "TF_DATA_DIR": "/tmp/.terraform"
