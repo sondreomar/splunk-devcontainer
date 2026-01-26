@@ -16,9 +16,7 @@
             },
             "extensions": [
                 "ms-azuretools.vscode-docker",
-                "Splunk.splunk",
-                "GitHub.copilot",
-                "GitHub.copilot-chat"
+                "Splunk.splunk"
             ]
         }
     }
