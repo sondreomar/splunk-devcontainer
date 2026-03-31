@@ -31,7 +31,8 @@ env:
       "10.0.0",
       "10.0.1",
       "10.0.2",
-      "10.2.0"
+      "10.2.0",
+      "10.2.1"
     ]
 
 jobs:
@@ -167,6 +168,9 @@ jobs:
             platform: linux-amd64
           - version: 10.2.0
             build: "d749cb17ea65"
+            platform: linux-amd64
+          - version: 10.2.1
+            build: "c892b66d163d"
             platform: linux-amd64
 
     steps:
