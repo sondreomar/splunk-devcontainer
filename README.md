@@ -52,4 +52,4 @@ For Universal Forwarder, append `-uf` to any tag (e.g., `10.2.0-uf`, `10.2.0-v1.
 
 ## Building from Source
 
-To build the image devcontainer from source, simply use the `devcontainer.json` in [**./src/splunk**](./src/splunk) or [**./src/universalforwarder**](./src/universalforwarder) and supply build arguments for the desired Splunk version. See [build.yml](./.github/workflows/build.yml) for build arguments for supported versions, or [Splunk's previous releases](https://www.splunk.com/en_us/download/previous-releases.html) for other versions.
+To build the image devcontainer from source, simply use the `devcontainer.json` in [**./src/splunk**](./src/splunk) or [**./src/universalforwarder**](./src/universalforwarder) and supply build arguments for the desired Splunk version. See [splunk-versions.json](./.github/splunk-versions.json) for build arguments for supported versions, or [Splunk's previous releases](https://www.splunk.com/en_us/download/previous-releases.html) for other versions.

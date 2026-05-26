@@ -1,0 +1,97 @@
+name: Prepare version metadata
+
+on:
+  workflow_call:
+    inputs:
+      image_tag:
+        description: "Git tag for the image version (e.g. v1.0.0)"
+        required: true
+        type: string
+    outputs:
+      image_version:
+        description: "Image semver version (X.Y.Z)"
+        value: ${{ jobs.prepare.outputs.image_version }}
+      image_major:
+        description: "Image major version (X)"
+        value: ${{ jobs.prepare.outputs.image_major }}
+      image_minor:
+        description: "Image major.minor version (X.Y)"
+        value: ${{ jobs.prepare.outputs.image_minor }}
+      splunk_versions:
+        description: "JSON array of all Splunk versions"
+        value: ${{ jobs.prepare.outputs.splunk_versions }}
+      splunk_latest:
+        description: "Latest Splunk version"
+        value: ${{ jobs.prepare.outputs.splunk_latest }}
+      splunk_major:
+        description: "JSON object keyed by full version (e.g. '10.4.0') to its major tag (e.g. '10'), only for the latest patch per major line"
+        value: ${{ jobs.prepare.outputs.splunk_major }}
+      splunk_minor:
+        description: "JSON object keyed by full version (e.g. '9.4.11') to its minor tag (e.g. '9.4'), only for the latest patch per minor line"
+        value: ${{ jobs.prepare.outputs.splunk_minor }}
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      image_version: ${{ steps.image_semver.outputs.version }}
+      image_major: ${{ steps.image_semver.outputs.major }}
+      image_minor: ${{ steps.image_semver.outputs.minor }}
+      splunk_versions: ${{ steps.splunk_semver.outputs.versions }}
+      splunk_latest: ${{ steps.splunk_semver.outputs.latest }}
+      splunk_major: ${{ steps.splunk_semver.outputs.major }}
+      splunk_minor: ${{ steps.splunk_semver.outputs.minor }}
+
+    steps:
+      - name: Checkout version data
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          sparse-checkout: .github/splunk-versions.json
+          sparse-checkout-cone-mode: false
+
+      - name: Determine image version tags
+        id: image_semver
+        run: |
+          # Extract version from tag (v1.0.0 -> 1.0.0)
+          version="${{ inputs.image_tag }}"
+          version="${version#refs/tags/v}"
+          version="${version#v}"
+
+          # Validate semver format (X.Y.Z)
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Invalid semver tag: v$version. Expected format: vX.Y.Z"
+            exit 1
+          fi
+
+          major=$(echo "$version" | cut -d. -f1)
+          minor=$(echo "$version" | cut -d. -f1-2)
+
+          echo "version=$version" >> $GITHUB_OUTPUT
+          echo "major=$major" >> $GITHUB_OUTPUT
+          echo "minor=$minor" >> $GITHUB_OUTPUT
+
+      - name: Determine splunk version tags
+        id: splunk_semver
+        run: |
+          versions=$(jq -c '[.[].version]' .github/splunk-versions.json)
+          sorted=$(echo "$versions" | jq -r '.[]' | sort -V | jq -R . | jq -sc .)
+
+          latest=$(echo "$sorted" | jq -r '.[-1]')
+          major=$(echo "$sorted" | jq -c 'group_by(split(".")[0]) | map({(last): .[0] | split(".")[0]}) | add')
+          minor=$(echo "$sorted" | jq -c 'group_by(split(".")[0:2] | join(".")) | map({(last): .[0] | split(".")[0:2] | join(".")}) | add')
+
+          # Debug output
+          echo "All versions:"
+          echo "$versions" | jq .
+          echo "Latest version: $latest"
+          echo "Major version mappings:"
+          echo "$major" | jq .
+          echo "Minor version mappings:"
+          echo "$minor" | jq .
+
+          echo "versions=$versions" >> $GITHUB_OUTPUT
+          echo "latest=$latest" >> $GITHUB_OUTPUT
+          echo "major=$major" >> $GITHUB_OUTPUT
+          echo "minor=$minor" >> $GITHUB_OUTPUT

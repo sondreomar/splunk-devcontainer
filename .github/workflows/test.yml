@@ -1,0 +1,34 @@
+name: Test devcontainer build
+
+on:
+  pull_request:
+    paths:
+      - "src/**"
+      - ".github/workflows/build-image.yml"
+      - ".github/workflows/test.yml"
+      - ".github/workflows/prepare.yml"
+      - ".github/splunk-versions.json"
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    uses: ./.github/workflows/prepare.yml
+    with:
+      image_tag: v0.0.0
+
+  build:
+    needs: prepare
+    uses: ./.github/workflows/build-image.yml
+    with:
+      image_version: ${{ needs.prepare.outputs.image_version }}
+      image_major: ${{ needs.prepare.outputs.image_major }}
+      image_minor: ${{ needs.prepare.outputs.image_minor }}
+      splunk_latest: ${{ needs.prepare.outputs.splunk_latest }}
+      splunk_major: ${{ needs.prepare.outputs.splunk_major }}
+      splunk_minor: ${{ needs.prepare.outputs.splunk_minor }}
