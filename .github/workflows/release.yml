@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - v[0-9]+.[0-9]+.[0-9]+
+  workflow_dispatch:
+    inputs:
+      all_versions:
+        description: "Build all versions, including inactive"
+        type: boolean
+        default: false
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
@@ -14,6 +20,7 @@ jobs:
       contents: read
     with:
       image_tag: ${{ github.ref_name }}
+      all_versions: ${{ inputs.all_versions || false }}
 
   build-and-push:
     needs: prepare
@@ -32,6 +39,7 @@ jobs:
       splunk_minor: ${{ needs.prepare.outputs.splunk_minor }}
       push: true
       allow_failures: true
+      all_versions: ${{ inputs.all_versions || false }}
 
   delete-untagged-images:
     needs: build-and-push

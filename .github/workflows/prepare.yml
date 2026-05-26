@@ -7,6 +7,11 @@ on:
         description: "Git tag for the image version (e.g. v1.0.0)"
         required: true
         type: string
+      all_versions:
+        description: "Include all versions, including inactive"
+        required: false
+        type: boolean
+        default: false
     outputs:
       image_version:
         description: "Image semver version (X.Y.Z)"
@@ -74,8 +79,14 @@ jobs:
 
       - name: Determine splunk version tags
         id: splunk_semver
+        env:
+          ALL_VERSIONS: ${{ inputs.all_versions }}
         run: |
-          versions=$(jq -c '[.[].version]' .github/splunk-versions.json)
+          filter='[.[] | select(.active) | .version]'
+          if [[ "$ALL_VERSIONS" == "true" ]]; then
+            filter='[.[].version]'
+          fi
+          versions=$(jq -c "$filter" .github/splunk-versions.json)
           sorted=$(echo "$versions" | jq -r '.[]' | sort -V | jq -R . | jq -sc .)
 
           latest=$(echo "$sorted" | jq -r '.[-1]')
