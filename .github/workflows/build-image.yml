@@ -176,6 +176,7 @@ jobs:
   post-build:
     needs: build
     runs-on: ubuntu-latest
+    continue-on-error: ${{ inputs.allow_failures }}
     if: inputs.push
     steps:
       - name: Log in to the Container registry
@@ -185,15 +186,34 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Re-push latest tags
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+
+      - name: Retag latest manifests
         env:
           IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           SPLUNK_LATEST: ${{ inputs.splunk_latest }}
+          ALLOW_FAILURES: ${{ inputs.allow_failures }}
         run: |
-          docker pull "$IMAGE_REF:$SPLUNK_LATEST-uf"
-          docker tag "$IMAGE_REF:$SPLUNK_LATEST-uf" "$IMAGE_REF:latest-uf"
-          docker push "$IMAGE_REF:latest-uf"
+          retag_manifest() {
+            local source_ref="$1"
+            local target_ref="$2"
 
-          docker pull "$IMAGE_REF:$SPLUNK_LATEST"
-          docker tag "$IMAGE_REF:$SPLUNK_LATEST" "$IMAGE_REF:latest"
-          docker push "$IMAGE_REF:latest"
+            if docker buildx imagetools inspect "$source_ref" >/dev/null 2>&1; then
+              docker buildx imagetools create \
+                --tag "$target_ref" \
+                "$source_ref"
+              return 0
+            fi
+
+            if [[ "$ALLOW_FAILURES" == "true" ]]; then
+              echo "Skipping retag for missing source manifest: $source_ref"
+              return 0
+            fi
+
+            echo "Source manifest not found: $source_ref"
+            return 1
+          }
+
+          retag_manifest "$IMAGE_REF:$SPLUNK_LATEST-uf" "$IMAGE_REF:latest-uf"
+          retag_manifest "$IMAGE_REF:$SPLUNK_LATEST" "$IMAGE_REF:latest"
