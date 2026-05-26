@@ -1,0 +1,75 @@
+name: Release Splunk devcontainer image
+
+on:
+  push:
+    tags:
+      - v*.*.*
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+  prepare:
+    uses: ./.github/workflows/prepare.yml
+    permissions:
+      contents: read
+    with:
+      image_tag: ${{ github.ref_name }}
+      versions: |
+        [
+          "9.3.2",
+          "9.3.3",
+          "9.3.4",
+          "9.3.5",
+          "9.3.6",
+          "9.3.7",
+          "9.3.8",
+          "9.4.0",
+          "9.4.1",
+          "9.4.2",
+          "9.4.3",
+          "9.4.4",
+          "9.4.5",
+          "9.4.6",
+          "9.4.7",
+          "10.0.0",
+          "10.0.1",
+          "10.0.2",
+          "10.2.0",
+          "10.2.1"
+        ]
+
+  build-and-push:
+    needs: prepare
+    uses: ./.github/workflows/build-image.yml
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+    with:
+      image_version: ${{ needs.prepare.outputs.image_version }}
+      image_major: ${{ needs.prepare.outputs.image_major }}
+      image_minor: ${{ needs.prepare.outputs.image_minor }}
+      splunk_versions: ${{ needs.prepare.outputs.splunk_versions }}
+      splunk_latest: ${{ needs.prepare.outputs.splunk_latest }}
+      splunk_major: ${{ needs.prepare.outputs.splunk_major }}
+      splunk_minor: ${{ needs.prepare.outputs.splunk_minor }}
+      push: true
+
+  delete-untagged-images:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+
+    steps:
+      - name: Trim repository owner from image name
+        run: echo "IMAGE_NAME=$( basename ${{ github.repository }} )" >>${GITHUB_ENV}
+
+      - name: Delete untagged images
+        uses: actions/delete-package-versions@e5bc658cc4c965c472efe991f8beea3981499c55 # v5.0.0
+        with:
+          package-type: container
+          package-name: ${{ env.IMAGE_NAME }}
+          delete-only-untagged-versions: true
+          token: ${{ secrets.GITHUB_TOKEN }}
