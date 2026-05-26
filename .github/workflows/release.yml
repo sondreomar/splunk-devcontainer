@@ -48,13 +48,10 @@ jobs:
       packages: write
 
     steps:
-      - name: Trim repository owner from image name
-        run: echo "IMAGE_NAME=$( basename ${{ github.repository }} )" >>${GITHUB_ENV}
-
       - name: Delete untagged images
         uses: actions/delete-package-versions@e5bc658cc4c965c472efe991f8beea3981499c55 # v5.0.0
         with:
           package-type: container
-          package-name: ${{ env.IMAGE_NAME }}
+          package-name: ${{ github.event.repository.name }}
           delete-only-untagged-versions: true
           token: ${{ secrets.GITHUB_TOKEN }}
