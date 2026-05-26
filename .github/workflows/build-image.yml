@@ -185,7 +185,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Re-push latest tag for latest Splunk version
+      - name: Re-push latest tags
         env:
           IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           SPLUNK_LATEST: ${{ inputs.splunk_latest }}
