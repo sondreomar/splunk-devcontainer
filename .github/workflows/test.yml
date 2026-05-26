@@ -7,6 +7,7 @@ on:
       - ".github/workflows/build-image.yml"
       - ".github/workflows/test.yml"
       - ".github/workflows/prepare.yml"
+      - ".github/splunk-versions.json"
 
 concurrency:
   group: test-${{ github.ref }}
@@ -20,29 +21,6 @@ jobs:
     uses: ./.github/workflows/prepare.yml
     with:
       image_tag: v0.0.0
-      versions: |
-        [
-          "9.3.2",
-          "9.3.3",
-          "9.3.4",
-          "9.3.5",
-          "9.3.6",
-          "9.3.7",
-          "9.3.8",
-          "9.4.0",
-          "9.4.1",
-          "9.4.2",
-          "9.4.3",
-          "9.4.4",
-          "9.4.5",
-          "9.4.6",
-          "9.4.7",
-          "10.0.0",
-          "10.0.1",
-          "10.0.2",
-          "10.2.0",
-          "10.2.1"
-        ]
 
   build:
     needs: prepare
@@ -51,7 +29,6 @@ jobs:
       image_version: ${{ needs.prepare.outputs.image_version }}
       image_major: ${{ needs.prepare.outputs.image_major }}
       image_minor: ${{ needs.prepare.outputs.image_minor }}
-      splunk_versions: ${{ needs.prepare.outputs.splunk_versions }}
       splunk_latest: ${{ needs.prepare.outputs.splunk_latest }}
       splunk_major: ${{ needs.prepare.outputs.splunk_major }}
       splunk_minor: ${{ needs.prepare.outputs.splunk_minor }}

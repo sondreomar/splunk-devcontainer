@@ -7,10 +7,6 @@ on:
         description: "Git tag for the image version (e.g. v1.0.0)"
         required: true
         type: string
-      versions:
-        description: "JSON array of Splunk versions to build"
-        required: true
-        type: string
     outputs:
       image_version:
         description: "Image semver version (X.Y.Z)"
@@ -49,6 +45,12 @@ jobs:
       splunk_minor: ${{ steps.splunk_semver.outputs.minor }}
 
     steps:
+      - name: Checkout version data
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          sparse-checkout: .github/splunk-versions.json
+          sparse-checkout-cone-mode: false
+
       - name: Determine image version tags
         id: image_semver
         run: |
@@ -73,7 +75,7 @@ jobs:
       - name: Determine splunk version tags
         id: splunk_semver
         run: |
-          versions=$(echo '${{ inputs.versions }}' | jq -c .)
+          versions=$(jq -c '[.[].version]' .github/splunk-versions.json)
           sorted=$(echo "$versions" | jq -r '.[]' | sort -V | jq -R . | jq -sc .)
 
           latest=$(echo "$sorted" | jq -r '.[-1]')

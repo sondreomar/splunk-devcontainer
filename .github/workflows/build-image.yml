@@ -15,10 +15,6 @@ on:
         description: "Image major.minor version (X.Y)"
         required: true
         type: string
-      splunk_versions:
-        description: "JSON array of all Splunk versions"
-        required: true
-        type: string
       splunk_latest:
         description: "Latest Splunk version"
         required: true
@@ -47,80 +43,38 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.parse.outputs.matrix }}
+    steps:
+      - name: Checkout version data
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          sparse-checkout: .github/splunk-versions.json
+          sparse-checkout-cone-mode: false
+
+      - name: Build matrix
+        id: parse
+        run: |
+          matrix=$(jq -c '{
+            variant: ["splunk", "universalforwarder"],
+            version: [.[].version],
+            include: [
+              {variant: "splunk", suffix: ""},
+              {variant: "universalforwarder", suffix: "-uf"}
+            ] + .
+          }' .github/splunk-versions.json)
+          echo "matrix=$matrix" >> $GITHUB_OUTPUT
+
   build:
+    needs: setup
     runs-on: ubuntu-latest
     continue-on-error: ${{ inputs.allow_failures }}
 
     strategy:
       fail-fast: ${{ !inputs.allow_failures }}
-      matrix:
-        variant: [splunk, universalforwarder]
-        version: ${{ fromJson(inputs.splunk_versions) }}
-        include:
-          - variant: splunk
-            suffix: ""
-          - variant: universalforwarder
-            suffix: "-uf"
-          - version: 9.3.2
-            build: "d8bb32809498"
-            platform: Linux-x86_64
-          - version: 9.3.3
-            build: "75595d8f83ef"
-            platform: Linux-x86_64
-          - version: 9.3.4
-            build: "30e72d3fb5f7"
-            platform: Linux-x86_64
-          - version: 9.3.5
-            build: "9848f25c9430"
-            platform: Linux-x86_64
-          - version: 9.3.6
-            build: "8c495c6a1f7d"
-            platform: Linux-x86_64
-          - version: 9.3.7
-            build: "d3040138454b"
-            platform: Linux-x86_64
-          - version: 9.3.8
-            build: "fbf0510dff69"
-            platform: Linux-x86_64
-          - version: 9.4.0
-            build: "6b4ebe426ca6"
-            platform: linux-amd64
-          - version: 9.4.1
-            build: "e3bdab203ac8"
-            platform: linux-amd64
-          - version: 9.4.2
-            build: "e9664af3d956"
-            platform: linux-amd64
-          - version: 9.4.3
-            build: "237ebbd22314"
-            platform: linux-amd64
-          - version: 9.4.4
-            build: "f627d88b766b"
-            platform: linux-amd64
-          - version: 9.4.5
-            build: "8fb2a6c586a5"
-            platform: linux-amd64
-          - version: 9.4.6
-            build: "60284236e579"
-            platform: linux-amd64
-          - version: 9.4.7
-            build: "2a9293b80994"
-            platform: linux-amd64
-          - version: 10.0.0
-            build: "e8eb0c4654f8"
-            platform: linux-amd64
-          - version: 10.0.1
-            build: "c486717c322b"
-            platform: linux-amd64
-          - version: 10.0.2
-            build: "e2d18b4767e9"
-            platform: linux-amd64
-          - version: 10.2.0
-            build: "d749cb17ea65"
-            platform: linux-amd64
-          - version: 10.2.1
-            build: "c892b66d163d"
-            platform: linux-amd64
+      matrix: ${{ fromJson(needs.setup.outputs.matrix) }}
 
     steps:
       - name: Reclaim ubuntu-latest runner disk space
