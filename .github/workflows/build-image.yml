@@ -60,10 +60,10 @@ jobs:
           matrix=$(jq -c '{
             variant: ["splunk", "universalforwarder"],
             version: [.[].version],
-            include: [
+            include: ([
               {variant: "splunk", suffix: ""},
               {variant: "universalforwarder", suffix: "-uf"}
-            ] + .
+            ] + .)
           }' .github/splunk-versions.json)
           echo "matrix=$matrix" >> $GITHUB_OUTPUT
 
