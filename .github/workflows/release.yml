@@ -1,4 +1,4 @@
-name: Release Splunk devcontainer image
+name: Release devcontainer
 
 on:
   push:
@@ -14,7 +14,7 @@ on:
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
-  prepare:
+  versions:
     uses: ./.github/workflows/prepare.yml
     permissions:
       contents: read
@@ -23,7 +23,7 @@ jobs:
       all_versions: ${{ inputs.all_versions || false }}
 
   build-and-push:
-    needs: prepare
+    needs: versions
     uses: ./.github/workflows/build-image.yml
     permissions:
       contents: read
@@ -32,12 +32,12 @@ jobs:
       id-token: write
       artifact-metadata: write
     with:
-      image_version: ${{ needs.prepare.outputs.image_version }}
-      image_major: ${{ needs.prepare.outputs.image_major }}
-      image_minor: ${{ needs.prepare.outputs.image_minor }}
-      splunk_latest: ${{ needs.prepare.outputs.splunk_latest }}
-      splunk_major: ${{ needs.prepare.outputs.splunk_major }}
-      splunk_minor: ${{ needs.prepare.outputs.splunk_minor }}
+      image_version: ${{ needs.versions.outputs.image_version }}
+      image_major: ${{ needs.versions.outputs.image_major }}
+      image_minor: ${{ needs.versions.outputs.image_minor }}
+      splunk_latest: ${{ needs.versions.outputs.splunk_latest }}
+      splunk_major: ${{ needs.versions.outputs.splunk_major }}
+      splunk_minor: ${{ needs.versions.outputs.splunk_minor }}
       push: true
       allow_failures: true
       all_versions: ${{ inputs.all_versions || false }}

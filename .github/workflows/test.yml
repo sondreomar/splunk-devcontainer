@@ -1,4 +1,4 @@
-name: Test devcontainer build
+name: Test devcontainer
 
 on:
   pull_request:
@@ -23,20 +23,20 @@ permissions:
   contents: read
 
 jobs:
-  prepare:
+  versions:
     uses: ./.github/workflows/prepare.yml
     with:
       image_tag: v0.0.0
       all_versions: ${{ inputs.all_versions || false }}
 
   build:
-    needs: prepare
+    needs: versions
     uses: ./.github/workflows/build-image.yml
     with:
-      image_version: ${{ needs.prepare.outputs.image_version }}
-      image_major: ${{ needs.prepare.outputs.image_major }}
-      image_minor: ${{ needs.prepare.outputs.image_minor }}
-      splunk_latest: ${{ needs.prepare.outputs.splunk_latest }}
-      splunk_major: ${{ needs.prepare.outputs.splunk_major }}
-      splunk_minor: ${{ needs.prepare.outputs.splunk_minor }}
+      image_version: ${{ needs.versions.outputs.image_version }}
+      image_major: ${{ needs.versions.outputs.image_major }}
+      image_minor: ${{ needs.versions.outputs.image_minor }}
+      splunk_latest: ${{ needs.versions.outputs.splunk_latest }}
+      splunk_major: ${{ needs.versions.outputs.splunk_major }}
+      splunk_minor: ${{ needs.versions.outputs.splunk_minor }}
       all_versions: ${{ inputs.all_versions || false }}
