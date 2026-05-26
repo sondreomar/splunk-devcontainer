@@ -53,13 +53,13 @@ jobs:
     outputs:
       matrix: ${{ steps.parse.outputs.matrix }}
     steps:
-      - name: Checkout version data
+      - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           sparse-checkout: .github/splunk-versions.json
           sparse-checkout-cone-mode: false
 
-      - name: Build matrix
+      - name: Parse versions
         id: parse
         env:
           ALL_VERSIONS: ${{ inputs.all_versions }}
@@ -78,7 +78,7 @@ jobs:
           }" .github/splunk-versions.json)
           echo "matrix=$matrix" >> $GITHUB_OUTPUT
 
-  build:
+  image:
     needs: setup
     runs-on: ubuntu-latest
     continue-on-error: ${{ inputs.allow_failures }}
@@ -88,7 +88,7 @@ jobs:
       matrix: ${{ fromJson(needs.setup.outputs.matrix) }}
 
     steps:
-      - name: Reclaim ubuntu-latest runner disk space
+      - name: Free disk space
         run: |
           echo "Disk usage before cleanup:"
           df . -h
@@ -101,10 +101,10 @@ jobs:
           echo "Disk usage after cleanup:"
           df . -h
 
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Log in to the Container registry
+      - name: Login
         if: inputs.push
         uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4.0.0
         with:
@@ -112,18 +112,18 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up Docker Buildx
+      - name: Buildx
         uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
 
-      - name: Setup Node.js
+      - name: Node.js
         uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version: "20.19.4"
 
-      - name: Setup Dev Container CLI
+      - name: Dev Container CLI
         run: npm install -g @devcontainers/cli@0.80.0
 
-      - name: Build devcontainer image
+      - name: Build
         env:
           VARIANT: ${{ matrix.variant }}
           SUFFIX: ${{ matrix.suffix }}
@@ -154,7 +154,7 @@ jobs:
             ${SPLUNK_MAJOR:+--image-name $IMAGE_REF:${SPLUNK_MAJOR}${SUFFIX}-v${IMAGE_MAJOR}} \
             ${SPLUNK_LATEST:+--image-name $IMAGE_REF:latest${SUFFIX}}
 
-      - name: Push devcontainer image
+      - name: Push
         if: inputs.push
         id: push
         env:
@@ -165,7 +165,7 @@ jobs:
           digest=$(docker inspect --format='{{index .RepoDigests 0}}' "$IMAGE_REF:$VERSION_TAG" | cut -d@ -f2)
           echo "digest=$digest" >> $GITHUB_OUTPUT
 
-      - name: Attest build provenance
+      - name: Attest
         if: inputs.push
         uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
         with:
@@ -173,20 +173,20 @@ jobs:
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: true
 
-  post-build:
-    needs: build
+  retag:
+    needs: image
     runs-on: ubuntu-latest
     continue-on-error: ${{ inputs.allow_failures }}
     if: inputs.push
     steps:
-      - name: Log in to the Container registry
+      - name: Login
         uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4.0.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up Docker Buildx
+      - name: Buildx
         uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
 
       - name: Retag latest manifests
