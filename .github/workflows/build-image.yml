@@ -123,11 +123,6 @@ jobs:
       - name: Setup Dev Container CLI
         run: npm install -g @devcontainers/cli@0.80.0
 
-      - name: Ensure lower case image name
-        run: echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
-        env:
-          IMAGE_NAME: ${{ env.IMAGE_NAME }}
-
       - name: Build devcontainer image
         env:
           VARIANT: ${{ matrix.variant }}
@@ -177,3 +172,28 @@ jobs:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: true
+
+  post-build:
+    needs: build
+    runs-on: ubuntu-latest
+    if: inputs.push
+    steps:
+      - name: Log in to the Container registry
+        uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4.0.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Re-push latest tag for latest Splunk version
+        env:
+          IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          SPLUNK_LATEST: ${{ inputs.splunk_latest }}
+        run: |
+          docker pull "$IMAGE_REF:$SPLUNK_LATEST-uf"
+          docker tag "$IMAGE_REF:$SPLUNK_LATEST-uf" "$IMAGE_REF:latest-uf"
+          docker push "$IMAGE_REF:latest-uf"
+
+          docker pull "$IMAGE_REF:$SPLUNK_LATEST"
+          docker tag "$IMAGE_REF:$SPLUNK_LATEST" "$IMAGE_REF:latest"
+          docker push "$IMAGE_REF:latest"
