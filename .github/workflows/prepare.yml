@@ -28,10 +28,10 @@ on:
         description: "Latest Splunk version"
         value: ${{ jobs.prepare.outputs.splunk_latest }}
       splunk_major:
-        description: "JSON mapping of latest version per major"
+        description: "JSON object keyed by full version (e.g. '10.4.0') to its major tag (e.g. '10'), only for the latest patch per major line"
         value: ${{ jobs.prepare.outputs.splunk_major }}
       splunk_minor:
-        description: "JSON mapping of latest version per minor"
+        description: "JSON object keyed by full version (e.g. '9.4.11') to its minor tag (e.g. '9.4'), only for the latest patch per minor line"
         value: ${{ jobs.prepare.outputs.splunk_minor }}
 
 jobs:
