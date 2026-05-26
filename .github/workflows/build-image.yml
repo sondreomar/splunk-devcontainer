@@ -37,6 +37,11 @@ on:
         required: false
         type: boolean
         default: false
+      all_versions:
+        description: "Build all versions, including inactive"
+        required: false
+        type: boolean
+        default: false
 
 env:
   REGISTRY: ghcr.io
@@ -56,15 +61,21 @@ jobs:
 
       - name: Build matrix
         id: parse
+        env:
+          ALL_VERSIONS: ${{ inputs.all_versions }}
         run: |
-          matrix=$(jq -c '{
-            variant: ["splunk", "universalforwarder"],
+          filter='[.[] | select(.active)]'
+          if [[ "$ALL_VERSIONS" == "true" ]]; then
+            filter='.'
+          fi
+          matrix=$(jq -c "$filter | {
+            variant: [\"splunk\", \"universalforwarder\"],
             version: [.[].version],
             include: ([
-              {variant: "splunk", suffix: ""},
-              {variant: "universalforwarder", suffix: "-uf"}
+              {variant: \"splunk\", suffix: \"\"},
+              {variant: \"universalforwarder\", suffix: \"-uf\"}
             ] + .)
-          }' .github/splunk-versions.json)
+          }" .github/splunk-versions.json)
           echo "matrix=$matrix" >> $GITHUB_OUTPUT
 
   build:

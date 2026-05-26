@@ -8,6 +8,12 @@ on:
       - ".github/workflows/test.yml"
       - ".github/workflows/prepare.yml"
       - ".github/splunk-versions.json"
+  workflow_dispatch:
+    inputs:
+      all_versions:
+        description: "Build all versions, including inactive"
+        type: boolean
+        default: false
 
 concurrency:
   group: test-${{ github.ref }}
@@ -21,6 +27,7 @@ jobs:
     uses: ./.github/workflows/prepare.yml
     with:
       image_tag: v0.0.0
+      all_versions: ${{ inputs.all_versions || false }}
 
   build:
     needs: prepare
@@ -32,3 +39,4 @@ jobs:
       splunk_latest: ${{ needs.prepare.outputs.splunk_latest }}
       splunk_major: ${{ needs.prepare.outputs.splunk_major }}
       splunk_minor: ${{ needs.prepare.outputs.splunk_minor }}
+      all_versions: ${{ inputs.all_versions || false }}
