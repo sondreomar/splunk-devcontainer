@@ -12,6 +12,9 @@ concurrency:
   group: test-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   prepare:
     uses: ./.github/workflows/prepare.yml
@@ -28,8 +31,6 @@ jobs:
   build:
     needs: prepare
     uses: ./.github/workflows/build-image.yml
-    permissions:
-      contents: read
     with:
       image_version: ${{ needs.prepare.outputs.image_version }}
       image_major: ${{ needs.prepare.outputs.image_major }}
