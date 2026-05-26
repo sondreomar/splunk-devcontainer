@@ -171,7 +171,6 @@ jobs:
         with:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           subject-digest: ${{ steps.push.outputs.digest }}
-          push-to-registry: true
 
   retag:
     needs: image
@@ -197,6 +196,7 @@ jobs:
           # Best effort retagging
           if docker buildx imagetools inspect "$IMAGE_REF:$SPLUNK_LATEST-uf" >/dev/null 2>&1; then
             docker buildx imagetools create \
+              --prefer-index=false \
               --tag "$IMAGE_REF:latest-uf" \
               "$IMAGE_REF:$SPLUNK_LATEST-uf" || echo "Failed to retag latest-uf"
           else
@@ -205,6 +205,7 @@ jobs:
 
           if docker buildx imagetools inspect "$IMAGE_REF:$SPLUNK_LATEST" >/dev/null 2>&1; then
             docker buildx imagetools create \
+              --prefer-index=false \
               --tag "$IMAGE_REF:latest" \
               "$IMAGE_REF:$SPLUNK_LATEST" || echo "Failed to retag latest"
           else
