@@ -191,5 +191,19 @@ jobs:
 
       - name: Push devcontainer image
         if: inputs.push
+        id: push
+        env:
+          IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          VERSION_TAG: ${{ matrix.version }}${{ matrix.suffix }}
         run: |
-          docker push --all-tags ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          docker push --all-tags $IMAGE_REF
+          digest=$(docker inspect --format='{{index .RepoDigests 0}}' "$IMAGE_REF:$VERSION_TAG" | cut -d@ -f2)
+          echo "digest=$digest" >> $GITHUB_OUTPUT
+
+      - name: Attest build provenance
+        if: inputs.push
+        uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
