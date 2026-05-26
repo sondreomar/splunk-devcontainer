@@ -36,6 +36,11 @@ on:
         required: false
         type: boolean
         default: false
+      allow_failures:
+        description: "Whether to allow individual build failures"
+        required: false
+        type: boolean
+        default: false
 
 env:
   REGISTRY: ghcr.io
@@ -44,10 +49,10 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
-    continue-on-error: true
+    continue-on-error: ${{ inputs.allow_failures }}
 
     strategy:
-      fail-fast: false
+      fail-fast: ${{ !inputs.allow_failures }}
       matrix:
         variant: [splunk, universalforwarder]
         version: ${{ fromJson(inputs.splunk_versions) }}

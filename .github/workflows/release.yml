@@ -55,6 +55,7 @@ jobs:
       splunk_major: ${{ needs.prepare.outputs.splunk_major }}
       splunk_minor: ${{ needs.prepare.outputs.splunk_minor }}
       push: true
+      allow_failures: true
 
   delete-untagged-images:
     needs: build-and-push
