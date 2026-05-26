@@ -1,0 +1,195 @@
+name: Build devcontainer image
+
+on:
+  workflow_call:
+    inputs:
+      image_version:
+        description: "Image semver version (X.Y.Z)"
+        required: true
+        type: string
+      image_major:
+        description: "Image major version (X)"
+        required: true
+        type: string
+      image_minor:
+        description: "Image major.minor version (X.Y)"
+        required: true
+        type: string
+      splunk_versions:
+        description: "JSON array of all Splunk versions"
+        required: true
+        type: string
+      splunk_latest:
+        description: "Latest Splunk version"
+        required: true
+        type: string
+      splunk_major:
+        description: "JSON mapping of latest version per major"
+        required: true
+        type: string
+      splunk_minor:
+        description: "JSON mapping of latest version per minor"
+        required: true
+        type: string
+      push:
+        description: "Push images to registry after building"
+        required: false
+        type: boolean
+        default: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [splunk, universalforwarder]
+        version: ${{ fromJson(inputs.splunk_versions) }}
+        include:
+          - variant: splunk
+            suffix: ""
+          - variant: universalforwarder
+            suffix: "-uf"
+          - version: 9.3.2
+            build: "d8bb32809498"
+            platform: Linux-x86_64
+          - version: 9.3.3
+            build: "75595d8f83ef"
+            platform: Linux-x86_64
+          - version: 9.3.4
+            build: "30e72d3fb5f7"
+            platform: Linux-x86_64
+          - version: 9.3.5
+            build: "9848f25c9430"
+            platform: Linux-x86_64
+          - version: 9.3.6
+            build: "8c495c6a1f7d"
+            platform: Linux-x86_64
+          - version: 9.3.7
+            build: "d3040138454b"
+            platform: Linux-x86_64
+          - version: 9.3.8
+            build: "fbf0510dff69"
+            platform: Linux-x86_64
+          - version: 9.4.0
+            build: "6b4ebe426ca6"
+            platform: linux-amd64
+          - version: 9.4.1
+            build: "e3bdab203ac8"
+            platform: linux-amd64
+          - version: 9.4.2
+            build: "e9664af3d956"
+            platform: linux-amd64
+          - version: 9.4.3
+            build: "237ebbd22314"
+            platform: linux-amd64
+          - version: 9.4.4
+            build: "f627d88b766b"
+            platform: linux-amd64
+          - version: 9.4.5
+            build: "8fb2a6c586a5"
+            platform: linux-amd64
+          - version: 9.4.6
+            build: "60284236e579"
+            platform: linux-amd64
+          - version: 9.4.7
+            build: "2a9293b80994"
+            platform: linux-amd64
+          - version: 10.0.0
+            build: "e8eb0c4654f8"
+            platform: linux-amd64
+          - version: 10.0.1
+            build: "c486717c322b"
+            platform: linux-amd64
+          - version: 10.0.2
+            build: "e2d18b4767e9"
+            platform: linux-amd64
+          - version: 10.2.0
+            build: "d749cb17ea65"
+            platform: linux-amd64
+          - version: 10.2.1
+            build: "c892b66d163d"
+            platform: linux-amd64
+
+    steps:
+      - name: Reclaim ubuntu-latest runner disk space
+        run: |
+          echo "Disk usage before cleanup:"
+          df . -h
+          sudo rm -rf \
+            /usr/share/swift \
+            /usr/share/dotnet \
+            /usr/local/lib/android \
+            /opt/hostedtoolcache/CodeQL \
+            /opt/hostedtoolcache/go
+          echo "Disk usage after cleanup:"
+          df . -h
+
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Log in to the Container registry
+        if: inputs.push
+        uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4.0.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: "20.19.4"
+
+      - name: Setup Dev Container CLI
+        run: npm install -g @devcontainers/cli@0.80.0
+
+      - name: Ensure lower case image name
+        run: echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
+        env:
+          IMAGE_NAME: ${{ env.IMAGE_NAME }}
+
+      - name: Build devcontainer image
+        env:
+          VARIANT: ${{ matrix.variant }}
+          SUFFIX: ${{ matrix.suffix }}
+          SPLUNK_VERSION: ${{ matrix.version }}
+          SPLUNK_BUILD: ${{ matrix.build }}
+          SPLUNK_PLATFORM: ${{ matrix.platform }}
+          IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          SPLUNK_LATEST: ${{ matrix.version == inputs.splunk_latest && 'true' || '' }}
+          SPLUNK_MAJOR: ${{ fromJson(inputs.splunk_major)[matrix.version] || '' }}
+          SPLUNK_MINOR: ${{ fromJson(inputs.splunk_minor)[matrix.version] || '' }}
+          IMAGE_VERSION: ${{ inputs.image_version }}
+          IMAGE_MAJOR: ${{ inputs.image_major }}
+          IMAGE_MINOR: ${{ inputs.image_minor }}
+        run: |
+          devcontainer build \
+            --workspace-folder $GITHUB_WORKSPACE/src/$VARIANT \
+            --image-name $IMAGE_REF:$SPLUNK_VERSION$SUFFIX \
+            --image-name $IMAGE_REF:$SPLUNK_VERSION$SUFFIX-v$IMAGE_VERSION \
+            --image-name $IMAGE_REF:$SPLUNK_VERSION$SUFFIX-v$IMAGE_MINOR \
+            --image-name $IMAGE_REF:$SPLUNK_VERSION$SUFFIX-v$IMAGE_MAJOR \
+            ${SPLUNK_MINOR:+--image-name $IMAGE_REF:${SPLUNK_MINOR}${SUFFIX}} \
+            ${SPLUNK_MINOR:+--image-name $IMAGE_REF:${SPLUNK_MINOR}${SUFFIX}-v${IMAGE_VERSION}} \
+            ${SPLUNK_MINOR:+--image-name $IMAGE_REF:${SPLUNK_MINOR}${SUFFIX}-v${IMAGE_MINOR}} \
+            ${SPLUNK_MINOR:+--image-name $IMAGE_REF:${SPLUNK_MINOR}${SUFFIX}-v${IMAGE_MAJOR}} \
+            ${SPLUNK_MAJOR:+--image-name $IMAGE_REF:${SPLUNK_MAJOR}${SUFFIX}} \
+            ${SPLUNK_MAJOR:+--image-name $IMAGE_REF:${SPLUNK_MAJOR}${SUFFIX}-v${IMAGE_VERSION}} \
+            ${SPLUNK_MAJOR:+--image-name $IMAGE_REF:${SPLUNK_MAJOR}${SUFFIX}-v${IMAGE_MINOR}} \
+            ${SPLUNK_MAJOR:+--image-name $IMAGE_REF:${SPLUNK_MAJOR}${SUFFIX}-v${IMAGE_MAJOR}} \
+            ${SPLUNK_LATEST:+--image-name $IMAGE_REF:latest${SUFFIX}}
+
+      - name: Push devcontainer image
+        if: inputs.push
+        run: |
+          docker push --all-tags ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
