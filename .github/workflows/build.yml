@@ -75,7 +75,7 @@ jobs:
           versions=$(echo "$VERSIONS" | jq -c .)
           sorted=$(echo "$versions" | jq -r '.[]' | sort -V | jq -R . | jq -sc .)
 
-          latest=$(echo "$versions" | jq -r '.[]' | sort -V | tail -1)
+          latest=$(echo "$sorted" | jq -r '.[-1]')
           major=$(echo "$sorted" | jq -c 'group_by(split(".")[0]) | map({(last): .[0] | split(".")[0]}) | add')
           minor=$(echo "$sorted" | jq -c 'group_by(split(".")[0:2] | join(".")) | map({(last): .[0] | split(".")[0:2] | join(".")}) | add')
 
