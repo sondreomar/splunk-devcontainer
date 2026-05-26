@@ -30,6 +30,7 @@ jobs:
       packages: write
       attestations: write
       id-token: write
+      artifact-metadata: write
     with:
       image_version: ${{ needs.prepare.outputs.image_version }}
       image_major: ${{ needs.prepare.outputs.image_major }}
