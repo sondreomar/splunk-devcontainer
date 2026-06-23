@@ -63,6 +63,12 @@
         "version": "9.3.12",
         "build": "c3c164f2e6c4",
         "platform": "Linux-x86_64",
+        "active": false
+    },
+    {
+        "version": "9.3.13",
+        "build": "688758e24bbe",
+        "platform": "Linux-x86_64",
         "active": true
     },
     {
@@ -135,6 +141,12 @@
         "version": "9.4.11",
         "build": "bbcbf19b5450",
         "platform": "linux-amd64",
+        "active": false
+    },
+    {
+        "version": "9.4.12",
+        "build": "9dfc486f3d48",
+        "platform": "linux-amd64",
         "active": true
     },
     {
@@ -177,6 +189,12 @@
         "version": "10.0.6",
         "build": "098ea5cc39ba",
         "platform": "linux-amd64",
+        "active": false
+    },
+    {
+        "version": "10.0.7",
+        "build": "d24b16fd5f20",
+        "platform": "linux-amd64",
         "active": true
     },
     {
@@ -200,6 +218,12 @@
     {
         "version": "10.2.3",
         "build": "4d61cf8a5c0c",
+        "platform": "linux-amd64",
+        "active": false
+    },
+    {
+        "version": "10.2.4",
+        "build": "1526e5e5df42",
         "platform": "linux-amd64",
         "active": true
     },
