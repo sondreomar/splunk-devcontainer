@@ -75,7 +75,7 @@
         "version": "9.3.14",
         "build": "02bbaf562558",
         "platform": "Linux-x86_64",
-        "active": true
+        "active": false
     },
     {
         "version": "9.4.0",
@@ -171,6 +171,18 @@
         "version": "9.4.15",
         "build": "ae018c4ea857",
         "platform": "linux-amd64",
+        "active": false
+    },
+    {
+        "version": "9.4.16",
+        "build": "fbe3c1243d26",
+        "platform": "linux-amd64",
+        "active": true
+    },
+    {
+        "version": "9.4.17",
+        "build": "1b0c587000b8",
+        "platform": "linux-amd64",
         "active": true
     },
     {
@@ -237,6 +249,18 @@
         "version": "10.0.10",
         "build": "c66ca3846eb8",
         "platform": "linux-amd64",
+        "active": false
+    },
+    {
+        "version": "10.0.11",
+        "build": "c1c0c3ccd7cb",
+        "platform": "linux-amd64",
+        "active": true
+    },
+    {
+        "version": "10.0.12",
+        "build": "e3ec63dc1d02",
+        "platform": "linux-amd64",
         "active": true
     },
     {
@@ -285,6 +309,18 @@
         "version": "10.2.7",
         "build": "c0bff5b0fac3",
         "platform": "linux-amd64",
+        "active": false
+    },
+    {
+        "version": "10.2.8",
+        "build": "981c2d735e4d",
+        "platform": "linux-amd64",
+        "active": true
+    },
+    {
+        "version": "10.2.9",
+        "build": "41bebfa38eb4",
+        "platform": "linux-amd64",
         "active": true
     },
     {
@@ -308,6 +344,30 @@
     {
         "version": "10.4.3",
         "build": "4174a2deda5d",
+        "platform": "linux-amd64",
+        "active": false
+    },
+    {
+        "version": "10.4.4",
+        "build": "f0f12fcdcaa1",
+        "platform": "linux-amd64",
+        "active": true
+    },
+    {
+        "version": "10.4.5",
+        "build": "de9225ad9740",
+        "platform": "linux-amd64",
+        "active": true
+    },
+    {
+        "version": "10.6.0.5",
+        "build": "86587d4e3b27",
+        "platform": "linux-amd64",
+        "active": true
+    },
+    {
+        "version": "10.6.1.1",
+        "build": "b2ae2962645c",
         "platform": "linux-amd64",
         "active": true
     }

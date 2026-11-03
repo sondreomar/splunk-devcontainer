@@ -38,6 +38,7 @@ Images are tagged with both the Splunk version and the devcontainer image versio
 - `<splunk-version>-v<image-version>` - Pinned to specific devcontainer image version (e.g., `10.2.0-v1.0.0`)
 - `<splunk-major>` - Latest Splunk patch version for a major release (e.g., `10`)
 - `<splunk-minor>` - Latest Splunk patch version for a minor release (e.g., `10.2`)
+- `<splunk-patch>` - Latest Splunk maintenance version for a patch release (e.g., `10.6.1` for `10.6.1.1`)
 - `latest` - Latest supported Splunk version with latest devcontainer image
 
 For Universal Forwarder, append `-uf` to any tag (e.g., `10.2.0-uf`, `10.2.0-v1.0.0-uf`).

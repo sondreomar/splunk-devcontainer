@@ -34,6 +34,9 @@ on:
       splunk_minor:
         description: "JSON object keyed by full version (e.g. '9.4.11') to its minor tag (e.g. '9.4'), only for the latest patch per minor line"
         value: ${{ jobs.prepare.outputs.splunk_minor }}
+      splunk_patch:
+        description: "JSON object keyed by full version (e.g. '10.6.1.1') to its patch tag (e.g. '10.6.1'), only for the latest maintenance release per patch line"
+        value: ${{ jobs.prepare.outputs.splunk_patch }}
 
 jobs:
   prepare:
@@ -48,6 +51,7 @@ jobs:
       splunk_latest: ${{ steps.splunk_semver.outputs.latest }}
       splunk_major: ${{ steps.splunk_semver.outputs.major }}
       splunk_minor: ${{ steps.splunk_semver.outputs.minor }}
+      splunk_patch: ${{ steps.splunk_semver.outputs.patch }}
 
     steps:
       - name: Checkout
@@ -92,6 +96,8 @@ jobs:
           latest=$(echo "$sorted" | jq -r '.[-1]')
           major=$(echo "$sorted" | jq -c 'group_by(split(".")[0]) | map({(last): .[0] | split(".")[0]}) | add')
           minor=$(echo "$sorted" | jq -c 'group_by(split(".")[0:2] | join(".")) | map({(last): .[0] | split(".")[0:2] | join(".")}) | add')
+          # X.Y.Z versions already carry their patch tag as their exact tag
+          patch=$(echo "$sorted" | jq -c 'group_by(split(".")[0:3] | join(".")) | map(last | select(split(".") | length > 3) | {(.): split(".")[0:3] | join(".")}) | add // {}')
 
           # Debug output
           echo "All versions:"
@@ -101,8 +107,11 @@ jobs:
           echo "$major" | jq .
           echo "Minor version mappings:"
           echo "$minor" | jq .
+          echo "Patch version mappings:"
+          echo "$patch" | jq .
 
           echo "versions=$versions" >> $GITHUB_OUTPUT
           echo "latest=$latest" >> $GITHUB_OUTPUT
           echo "major=$major" >> $GITHUB_OUTPUT
           echo "minor=$minor" >> $GITHUB_OUTPUT
+          echo "patch=$patch" >> $GITHUB_OUTPUT
