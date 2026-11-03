@@ -8,7 +8,7 @@ Devcontainer images for local Splunk development, published to `ghcr.io/sondreom
 - `src/universalforwarder/.devcontainer/` – Universal Forwarder image, published with the `-uf` tag suffix.
 - `.github/splunk-versions.json` – every supported Splunk version (`version`, `build`, `platform`).
 - `.github/workflows/` – `prepare.yml` works out tags and which versions to build, `build-image.yml` builds and pushes one variant (`splunk`, `splunk-slim` or `universalforwarder`), `test.yml` runs on PRs, and `release.yml` runs on `vX.Y.Z` git tags.
-  - Each variant has its own matrix, so the 256-jobs-per-matrix limit applies per variant. Builds run at most 15 at a time, and releases build one variant at a time.
+  - Each variant has its own matrix, so the 256-jobs-per-matrix limit applies per variant. Variants build one at a time, with at most 15 builds in parallel, so other workflows still get runners.
   - Releases build the versions added since the previous release tag. If `src/` or `build-image.yml` changed since then, they also rebuild the newest version in each minor line.
   - PRs build the newest version in each minor line, plus any versions the PR adds.
   - Dispatch `release.yml` (on a tag) or `test.yml` with `all_versions` to build every version.
