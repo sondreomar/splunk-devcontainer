@@ -42,7 +42,7 @@ Devcontainer images for local Splunk development, published to `ghcr.io/sondreom
 
 ## Tags
 
-For each built version, `build-image.yml` adds these floating tags, plus `-v<image version>` and `-uf` versions of each:
+For each built version, `build-image.yml` adds these floating tags, each with a `-uf` variant for the forwarder:
 
 | Tag | Points to |
 | --- | --- |
@@ -50,6 +50,8 @@ For each built version, `build-image.yml` adds these floating tags, plus `-v<ima
 | `X.Y` | latest active version in that minor line |
 | `X` | latest active version in that major line |
 | `latest` | latest active version overall |
+
+The version tags (including the full `X.Y.Z.N` tag) also get `-v<image version>`, `-v<image minor>` and `-v<image major>` variants, e.g. `10.6-uf-v1.2.3`. `latest` and `latest-uf` don't, so tags like `latest-v1.2.3` don't exist.
 
 The tags are worked out only from active versions. A plain `X.Y.Z` is left out of the build when an active `X.Y.Z.N` exists, so two builds never push the same tag.
 
