@@ -360,6 +360,12 @@
         "active": true
     },
     {
+        "version": "10.6.0.5",
+        "build": "86587d4e3b27",
+        "platform": "linux-amd64",
+        "active": true
+    },
+    {
         "version": "10.6.1.1",
         "build": "b2ae2962645c",
         "platform": "linux-amd64",
