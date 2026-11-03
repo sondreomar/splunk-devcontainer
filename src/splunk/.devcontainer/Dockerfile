@@ -6,6 +6,7 @@ FROM ${BASE_IMAGE} AS package
 ARG SPLUNK_VERSION
 ARG SPLUNK_BUILD
 ARG SPLUNK_PLATFORM
+ARG SPLUNK_SLIM
 
 ENV PACKAGE=splunk-${SPLUNK_VERSION}-${SPLUNK_BUILD}-${SPLUNK_PLATFORM}.tgz
 ENV PACKAGE_URL=https://download.splunk.com/products/splunk/releases/${SPLUNK_VERSION}/linux/${PACKAGE}
@@ -17,12 +18,16 @@ ADD ${PACKAGE_URL}.sha512 ${PACKAGE}.sha512
 
 COPY ["splunk_exclude", "/tmp/"]
 
+# Drop excluded files from Splunk's manifest so the integrity check doesn't report them as missing
 RUN echo "$(cat ${PACKAGE}.sha512)" | sha512sum --check --status \
     && mkdir -p /package/splunk \
-    && tar -C /package/splunk --strip 1 --exclude-from=splunk_exclude -zxf ${PACKAGE} \
+    && if [ "${SPLUNK_SLIM}" = "true" ]; then exclude="--exclude-from=splunk_exclude"; fi \
+    && tar -C /package/splunk --strip 1 ${exclude} -zxf ${PACKAGE} \
+    && find /package/splunk -printf 'splunk/%P\n' > installed \
+    && manifest=$(echo /package/splunk/splunk-*-manifest) \
+    && awk 'NR == FNR { installed[$0]; next } /^#/ || $5 in installed' installed "${manifest}" > manifest \
+    && mv manifest "${manifest}" \
     && touch /package/splunk/etc/.ui_login \
-    && mkdir -p /package/splunk/etc/system/local \
-    && printf "[system_checks]\ninstalled_files_integrity = disabled\n" >> /package/splunk/etc/system/local/limits.conf \
     && mkdir -p /package/splunk/etc/apps/user-prefs/local \
     && printf "[general]\nhideInstrumentationOptInModal=1\n" > /package/splunk/etc/apps/user-prefs/local/user-prefs.conf \
     && mkdir -p /package/splunk/etc/users/admin/search/local \

@@ -4,7 +4,7 @@ Devcontainer images for local Splunk development, published to `ghcr.io/sondreom
 
 ## Layout
 
-- `src/splunk/.devcontainer/` – Splunk Enterprise image (Dockerfile, entrypoint, `splunk_exclude`).
+- `src/splunk/.devcontainer/` – Splunk Enterprise image (Dockerfile, entrypoint, `splunk_exclude`). Built twice: the full image, and a slim image (`SPLUNK_SLIM=true`, `-slim` tag suffix) that leaves out everything matched by `splunk_exclude`.
 - `src/universalforwarder/.devcontainer/` – Universal Forwarder image, published with the `-uf` tag suffix.
 - `.github/splunk-versions.json` – the Splunk versions to build (`version`, `build`, `platform`, `active`).
 - `.github/workflows/` – `prepare.yml` works out tags, `build-image.yml` builds and pushes them, `test.yml` runs on PRs, and `release.yml` runs on `vX.Y.Z` git tags.
@@ -14,8 +14,9 @@ Devcontainer images for local Splunk development, published to `ghcr.io/sondreom
 ## Conventions
 
 - Keep both variants in sync. A change to one Dockerfile, entrypoint or `devcontainer.json` usually belongs in the other too. Known intentional differences:
-  - Only the Enterprise image uses `splunk_exclude` and seeds UI config.
+  - Only the Enterprise image has a slim variant and seeds UI config.
   - Only the forwarder image installs `systemd`, because the forwarder won't start without it.
+- Don't disable Splunk's `installed_files_integrity` check. The Dockerfile drops files that weren't extracted from Splunk's manifest instead, so anything added to `splunk_exclude` is handled automatically.
 - Pin GitHub Actions to a full commit SHA, with the version in a trailing comment (`uses: foo/bar@<sha> # vX.Y.Z`). Dependabot keeps them updated.
 - Pin devcontainer feature versions, e.g. `common-utils:2.5.7`.
 - Use Conventional Commits: `feat:`, `fix(ci):`, `ci:`, `chore:`. Dependabot uses `ci(deps):` and `docker(deps):`.
@@ -42,7 +43,7 @@ Devcontainer images for local Splunk development, published to `ghcr.io/sondreom
 
 ## Tags
 
-For each built version, `build-image.yml` adds these floating tags, each with a `-uf` variant for the forwarder:
+For each built version, `build-image.yml` adds these floating tags, each with a `-slim` variant for the slim Enterprise image and a `-uf` variant for the forwarder:
 
 | Tag | Points to |
 | --- | --- |
@@ -51,7 +52,7 @@ For each built version, `build-image.yml` adds these floating tags, each with a 
 | `X` | latest active version in that major line |
 | `latest` | latest active version overall |
 
-The version tags (including the full `X.Y.Z.N` tag) also get `-v<image version>`, `-v<image minor>` and `-v<image major>` variants, e.g. `10.6-uf-v1.2.3`. `latest` and `latest-uf` don't, so tags like `latest-v1.2.3` don't exist.
+The version tags (including the full `X.Y.Z.N` tag) also get `-v<image version>`, `-v<image minor>` and `-v<image major>` variants, e.g. `10.6-uf-v1.2.3` or `10.6-slim-v1.2.3`. `latest`, `latest-slim` and `latest-uf` don't, so tags like `latest-v1.2.3` don't exist.
 
 The tags are worked out only from active versions. A plain `X.Y.Z` is left out of the build when an active `X.Y.Z.N` exists, so two builds never push the same tag.
 
@@ -62,4 +63,4 @@ SPLUNK_VERSION=10.6.1.1 SPLUNK_BUILD=b2ae2962645c SPLUNK_PLATFORM=linux-amd64 \
   devcontainer build --workspace-folder src/splunk --image-name splunk-devcontainer:local
 ```
 
-Use `src/universalforwarder` for the forwarder. The tag logic in `prepare.yml` and `build-image.yml` is plain `jq`, so you can test it locally by passing the JSON file through the same filters.
+Add `SPLUNK_SLIM=true` for the slim image, or use `src/universalforwarder` for the forwarder. The tag logic in `prepare.yml` and `build-image.yml` is plain `jq`, so you can test it locally by passing the JSON file through the same filters.

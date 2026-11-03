@@ -75,11 +75,12 @@ jobs:
           # Skip X.Y.Z when an X.Y.Z.N exists, as the latter owns the X.Y.Z tag
           superseded='. as $all | map(select(.version as $v | $all | any(.version | startswith($v + ".")) | not))'
           matrix=$(jq -c "$filter | $superseded | {
-            variant: [\"splunk\", \"universalforwarder\"],
+            variant: [\"splunk\", \"splunk-slim\", \"universalforwarder\"],
             version: [.[].version],
             include: ([
-              {variant: \"splunk\", suffix: \"\"},
-              {variant: \"universalforwarder\", suffix: \"-uf\"}
+              {variant: \"splunk\", workspace: \"splunk\", suffix: \"\"},
+              {variant: \"splunk-slim\", workspace: \"splunk\", suffix: \"-slim\", slim: \"true\"},
+              {variant: \"universalforwarder\", workspace: \"universalforwarder\", suffix: \"-uf\"}
             ] + .)
           }" .github/splunk-versions.json)
           echo "matrix=$matrix" >> $GITHUB_OUTPUT
@@ -131,8 +132,9 @@ jobs:
 
       - name: Build
         env:
-          VARIANT: ${{ matrix.variant }}
+          WORKSPACE: ${{ matrix.workspace }}
           SUFFIX: ${{ matrix.suffix }}
+          SPLUNK_SLIM: ${{ matrix.slim }}
           SPLUNK_VERSION: ${{ matrix.version }}
           SPLUNK_BUILD: ${{ matrix.build }}
           SPLUNK_PLATFORM: ${{ matrix.platform }}
@@ -146,7 +148,7 @@ jobs:
           IMAGE_MINOR: ${{ inputs.image_minor }}
         run: |
           devcontainer build \
-            --workspace-folder $GITHUB_WORKSPACE/src/$VARIANT \
+            --workspace-folder $GITHUB_WORKSPACE/src/$WORKSPACE \
             --image-name $IMAGE_REF:$SPLUNK_VERSION$SUFFIX \
             --image-name $IMAGE_REF:$SPLUNK_VERSION$SUFFIX-v$IMAGE_VERSION \
             --image-name $IMAGE_REF:$SPLUNK_VERSION$SUFFIX-v$IMAGE_MINOR \
