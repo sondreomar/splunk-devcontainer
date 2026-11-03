@@ -7,6 +7,10 @@ on:
         description: "Image variant to build: splunk, splunk-slim or universalforwarder"
         required: true
         type: string
+      versions:
+        description: "JSON array of the versions to build, each with version, build and platform"
+        required: true
+        type: string
       image_version:
         description: "Image semver version (X.Y.Z)"
         required: true
@@ -45,16 +49,6 @@ on:
         required: false
         type: boolean
         default: false
-      all_versions:
-        description: "Build all versions, including inactive"
-        required: false
-        type: boolean
-        default: false
-      latest_per_minor:
-        description: "Only build the newest version in each minor line"
-        required: false
-        type: boolean
-        default: false
 
 env:
   REGISTRY: ghcr.io
@@ -84,29 +78,12 @@ jobs:
           echo "suffix=$suffix" >> $GITHUB_OUTPUT
           echo "slim=$slim" >> $GITHUB_OUTPUT
 
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          sparse-checkout: .github/splunk-versions.json
-          sparse-checkout-cone-mode: false
-
-      - name: Parse versions
+      - name: Matrix
         id: parse
         env:
-          ALL_VERSIONS: ${{ inputs.all_versions }}
-          LATEST_PER_MINOR: ${{ inputs.latest_per_minor }}
+          VERSIONS: ${{ inputs.versions }}
         run: |
-          filter='[.[] | select(.active)]'
-          if [[ "$ALL_VERSIONS" == "true" ]]; then
-            filter='.'
-          fi
-          # Skip X.Y.Z when an X.Y.Z.N exists, as the latter owns the X.Y.Z tag
-          superseded='. as $all | map(select(.version as $v | $all | any(.version | startswith($v + ".")) | not))'
-          filter="$filter | $superseded"
-          if [[ "$LATEST_PER_MINOR" == "true" ]]; then
-            filter="$filter | group_by(.version | split(\".\")[0:2]) | map(max_by(.version | split(\".\") | map(tonumber)))"
-          fi
-          matrix=$(jq -c "$filter | {version: [.[].version], include: .}" .github/splunk-versions.json)
+          matrix=$(echo "$VERSIONS" | jq -c '{version: map(.version), include: .}')
           echo "matrix=$matrix" >> $GITHUB_OUTPUT
 
   image:

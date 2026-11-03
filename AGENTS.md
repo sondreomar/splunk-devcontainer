@@ -6,10 +6,12 @@ Devcontainer images for local Splunk development, published to `ghcr.io/sondreom
 
 - `src/splunk/.devcontainer/` – Splunk Enterprise image (Dockerfile, entrypoint, `splunk_exclude`). Built twice: the full image, and a slim image (`SPLUNK_SLIM=true`, `-slim` tag suffix) that leaves out everything matched by `splunk_exclude`.
 - `src/universalforwarder/.devcontainer/` – Universal Forwarder image, published with the `-uf` tag suffix.
-- `.github/splunk-versions.json` – the Splunk versions to build (`version`, `build`, `platform`, `active`).
-- `.github/workflows/` – `prepare.yml` works out tags, `build-image.yml` builds and pushes one variant (`splunk`, `splunk-slim` or `universalforwarder`), `test.yml` runs on PRs, and `release.yml` runs on `vX.Y.Z` git tags.
+- `.github/splunk-versions.json` – every supported Splunk version (`version`, `build`, `platform`).
+- `.github/workflows/` – `prepare.yml` works out tags and which versions to build, `build-image.yml` builds and pushes one variant (`splunk`, `splunk-slim` or `universalforwarder`), `test.yml` runs on PRs, and `release.yml` runs on `vX.Y.Z` git tags.
   - Each variant has its own matrix, so the 256-jobs-per-matrix limit applies per variant. Builds run at most 15 at a time, and releases build one variant at a time.
-  - PRs build the newest version in each minor line. Dispatch `test.yml` with `all_versions` to build every version.
+  - Releases build the versions added since the previous release tag. If `src/` or `build-image.yml` changed since then, they also rebuild the newest version in each minor line.
+  - PRs build the newest version in each minor line, plus any versions the PR adds.
+  - Dispatch `release.yml` (on a tag) or `test.yml` with `all_versions` to build every version.
 - `examples/` – example devcontainer setups. The images aren't built from these.
 - `.devcontainer/` – devcontainer for working on this repo. It builds `src/splunk` with a pinned version.
 
@@ -28,7 +30,6 @@ Devcontainer images for local Splunk development, published to `ghcr.io/sondreom
 
 - Enterprise and the Universal Forwarder use the same build ID for a given version.
 - `platform` is `Linux-x86_64` for 9.3.x and `linux-amd64` from 9.4.0 onwards.
-- `active: true` means "build on the next release". When adding versions, set the new entries to `active: true` and every older entry to `false`, so old versions aren't rebuilt.
 - Keep entries sorted by version.
 - Splunk also ships four-part maintenance versions (e.g. `10.6.1.1`). Splunk's own `X.Y.Z` Docker tag points to the latest `X.Y.Z.N`, and our images follow the same pattern.
 

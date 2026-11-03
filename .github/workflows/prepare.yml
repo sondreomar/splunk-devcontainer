@@ -7,6 +7,10 @@ on:
         description: "Git tag for the image version (e.g. v1.0.0)"
         required: true
         type: string
+      build:
+        description: "Versions to build: 'release' (added since the previous release, plus the newest in each minor line if the image changed), 'test' (newest in each minor line, plus any added by the PR) or 'all'"
+        required: true
+        type: string
     outputs:
       image_version:
         description: "Image semver version (X.Y.Z)"
@@ -32,6 +36,9 @@ on:
       splunk_patch:
         description: "JSON object keyed by full version (e.g. '10.6.1.1') to its patch tag (e.g. '10.6.1'), only for the latest maintenance release per patch line"
         value: ${{ jobs.prepare.outputs.splunk_patch }}
+      splunk_builds:
+        description: "JSON array of the versions to build, each with version, build and platform"
+        value: ${{ jobs.prepare.outputs.splunk_builds }}
 
 jobs:
   prepare:
@@ -47,13 +54,13 @@ jobs:
       splunk_major: ${{ steps.splunk_semver.outputs.major }}
       splunk_minor: ${{ steps.splunk_semver.outputs.minor }}
       splunk_patch: ${{ steps.splunk_semver.outputs.patch }}
+      splunk_builds: ${{ steps.builds.outputs.builds }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          sparse-checkout: .github/splunk-versions.json
-          sparse-checkout-cone-mode: false
+          fetch-depth: 0
 
       - name: Image version
         id: image_semver
@@ -105,3 +112,57 @@ jobs:
           echo "major=$major" >> $GITHUB_OUTPUT
           echo "minor=$minor" >> $GITHUB_OUTPUT
           echo "patch=$patch" >> $GITHUB_OUTPUT
+
+      - name: Versions to build
+        id: builds
+        env:
+          BUILD: ${{ inputs.build }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          file=.github/splunk-versions.json
+          # Skip X.Y.Z when an X.Y.Z.N exists, as the latter owns the X.Y.Z tag
+          all=$(jq -c '. as $all | map(select(.version as $v | $all | any(.version | startswith($v + ".")) | not) | {version, build, platform})' "$file")
+          newest=$(echo "$all" | jq -c 'group_by(.version | split(".")[0:2]) | map(max_by(.version | split(".") | map(tonumber)))')
+
+          added_since() {
+            local previous
+            previous=$(git show "$1:$file" 2>/dev/null || echo '[]')
+            echo "$all" | jq -c --argjson previous "$previous" '[$previous[].version] as $old | map(select(.version | IN($old[]) | not))'
+          }
+          merge() {
+            jq -cn --argjson a "$1" --argjson b "$2" '$a + $b | unique_by(.version)'
+          }
+
+          case "$BUILD" in
+            all)
+              builds="$all"
+              ;;
+            test)
+              builds="$newest"
+              if [[ -n "$PR_BASE" ]]; then
+                builds=$(merge "$builds" "$(added_since "$PR_BASE")")
+              fi
+              ;;
+            release)
+              previous_tag=$(git describe --tags --abbrev=0 --match 'v[0-9]*.[0-9]*.[0-9]*' HEAD^ 2>/dev/null || true)
+              if [[ -z "$previous_tag" ]]; then
+                echo "No previous release, building all versions"
+                builds="$all"
+              else
+                echo "Previous release: $previous_tag"
+                builds=$(added_since "$previous_tag")
+                if ! git diff --quiet "$previous_tag" HEAD -- src .github/workflows/build-image.yml; then
+                  echo "Image changed since $previous_tag, rebuilding the newest version in each minor line"
+                  builds=$(merge "$builds" "$newest")
+                fi
+              fi
+              ;;
+            *)
+              echo "::error::Unknown build selection: $BUILD"
+              exit 1
+              ;;
+          esac
+
+          echo "Versions to build:"
+          echo "$builds" | jq -r '.[].version'
+          echo "builds=$builds" >> $GITHUB_OUTPUT

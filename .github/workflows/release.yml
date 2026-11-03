@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       all_versions:
-        description: "Build all versions, including inactive"
+        description: "Build all versions, not just those added or affected since the previous release"
         type: boolean
         default: false
 
@@ -20,9 +20,11 @@ jobs:
       contents: read
     with:
       image_tag: ${{ github.ref_name }}
+      build: ${{ inputs.all_versions && 'all' || 'release' }}
 
   build-and-push:
     needs: versions
+    if: needs.versions.outputs.splunk_builds != '[]'
     strategy:
       fail-fast: false
       # One variant at a time, as each already runs up to 15 builds in parallel
@@ -38,6 +40,7 @@ jobs:
       artifact-metadata: write
     with:
       variant: ${{ matrix.variant }}
+      versions: ${{ needs.versions.outputs.splunk_builds }}
       image_version: ${{ needs.versions.outputs.image_version }}
       image_major: ${{ needs.versions.outputs.image_major }}
       image_minor: ${{ needs.versions.outputs.image_minor }}
@@ -47,7 +50,6 @@ jobs:
       splunk_patch: ${{ needs.versions.outputs.splunk_patch }}
       push: true
       allow_failures: true
-      all_versions: ${{ inputs.all_versions || false }}
 
   delete-untagged-images:
     needs: build-and-push
