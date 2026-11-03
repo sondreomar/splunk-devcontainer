@@ -3,6 +3,10 @@ name: Build devcontainer image
 on:
   workflow_call:
     inputs:
+      variant:
+        description: "Image variant to build: splunk, splunk-slim or universalforwarder"
+        required: true
+        type: string
       image_version:
         description: "Image semver version (X.Y.Z)"
         required: true
@@ -46,6 +50,11 @@ on:
         required: false
         type: boolean
         default: false
+      latest_per_minor:
+        description: "Only build the newest version in each minor line"
+        required: false
+        type: boolean
+        default: false
 
 env:
   REGISTRY: ghcr.io
@@ -56,7 +65,25 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.parse.outputs.matrix }}
+      workspace: ${{ steps.variant.outputs.workspace }}
+      suffix: ${{ steps.variant.outputs.suffix }}
+      slim: ${{ steps.variant.outputs.slim }}
     steps:
+      - name: Variant
+        id: variant
+        env:
+          VARIANT: ${{ inputs.variant }}
+        run: |
+          case "$VARIANT" in
+            splunk) workspace=splunk suffix= slim= ;;
+            splunk-slim) workspace=splunk suffix=-slim slim=true ;;
+            universalforwarder) workspace=universalforwarder suffix=-uf slim= ;;
+            *) echo "::error::Unknown variant: $VARIANT"; exit 1 ;;
+          esac
+          echo "workspace=$workspace" >> $GITHUB_OUTPUT
+          echo "suffix=$suffix" >> $GITHUB_OUTPUT
+          echo "slim=$slim" >> $GITHUB_OUTPUT
+
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -67,6 +94,7 @@ jobs:
         id: parse
         env:
           ALL_VERSIONS: ${{ inputs.all_versions }}
+          LATEST_PER_MINOR: ${{ inputs.latest_per_minor }}
         run: |
           filter='[.[] | select(.active)]'
           if [[ "$ALL_VERSIONS" == "true" ]]; then
@@ -74,15 +102,11 @@ jobs:
           fi
           # Skip X.Y.Z when an X.Y.Z.N exists, as the latter owns the X.Y.Z tag
           superseded='. as $all | map(select(.version as $v | $all | any(.version | startswith($v + ".")) | not))'
-          matrix=$(jq -c "$filter | $superseded | {
-            variant: [\"splunk\", \"splunk-slim\", \"universalforwarder\"],
-            version: [.[].version],
-            include: ([
-              {variant: \"splunk\", workspace: \"splunk\", suffix: \"\"},
-              {variant: \"splunk-slim\", workspace: \"splunk\", suffix: \"-slim\", slim: \"true\"},
-              {variant: \"universalforwarder\", workspace: \"universalforwarder\", suffix: \"-uf\"}
-            ] + .)
-          }" .github/splunk-versions.json)
+          filter="$filter | $superseded"
+          if [[ "$LATEST_PER_MINOR" == "true" ]]; then
+            filter="$filter | group_by(.version | split(\".\")[0:2]) | map(max_by(.version | split(\".\") | map(tonumber)))"
+          fi
+          matrix=$(jq -c "$filter | {version: [.[].version], include: .}" .github/splunk-versions.json)
           echo "matrix=$matrix" >> $GITHUB_OUTPUT
 
   image:
@@ -92,6 +116,8 @@ jobs:
 
     strategy:
       fail-fast: ${{ !inputs.allow_failures }}
+      # Leave some of the account's 20 concurrent jobs free for other workflows
+      max-parallel: 15
       matrix: ${{ fromJson(needs.setup.outputs.matrix) }}
 
     steps:
@@ -132,9 +158,9 @@ jobs:
 
       - name: Build
         env:
-          WORKSPACE: ${{ matrix.workspace }}
-          SUFFIX: ${{ matrix.suffix }}
-          SPLUNK_SLIM: ${{ matrix.slim }}
+          WORKSPACE: ${{ needs.setup.outputs.workspace }}
+          SUFFIX: ${{ needs.setup.outputs.suffix }}
+          SPLUNK_SLIM: ${{ needs.setup.outputs.slim }}
           SPLUNK_VERSION: ${{ matrix.version }}
           SPLUNK_BUILD: ${{ matrix.build }}
           SPLUNK_PLATFORM: ${{ matrix.platform }}
@@ -172,7 +198,7 @@ jobs:
         id: push
         env:
           IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          VERSION_TAG: ${{ matrix.version }}${{ matrix.suffix }}
+          VERSION_TAG: ${{ matrix.version }}${{ needs.setup.outputs.suffix }}
         run: |
           docker push --all-tags $IMAGE_REF
           digest=$(docker inspect --format='{{index .RepoDigests 0}}' "$IMAGE_REF:$VERSION_TAG" | cut -d@ -f2)

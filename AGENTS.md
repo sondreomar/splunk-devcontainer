@@ -7,7 +7,9 @@ Devcontainer images for local Splunk development, published to `ghcr.io/sondreom
 - `src/splunk/.devcontainer/` – Splunk Enterprise image (Dockerfile, entrypoint, `splunk_exclude`). Built twice: the full image, and a slim image (`SPLUNK_SLIM=true`, `-slim` tag suffix) that leaves out everything matched by `splunk_exclude`.
 - `src/universalforwarder/.devcontainer/` – Universal Forwarder image, published with the `-uf` tag suffix.
 - `.github/splunk-versions.json` – the Splunk versions to build (`version`, `build`, `platform`, `active`).
-- `.github/workflows/` – `prepare.yml` works out tags, `build-image.yml` builds and pushes them, `test.yml` runs on PRs, and `release.yml` runs on `vX.Y.Z` git tags.
+- `.github/workflows/` – `prepare.yml` works out tags, `build-image.yml` builds and pushes one variant (`splunk`, `splunk-slim` or `universalforwarder`), `test.yml` runs on PRs, and `release.yml` runs on `vX.Y.Z` git tags.
+  - Each variant has its own matrix, so the 256-jobs-per-matrix limit applies per variant. Builds run at most 15 at a time, and releases build one variant at a time.
+  - PRs build the newest version in each minor line. Dispatch `test.yml` with `all_versions` to build every version.
 - `examples/` – example devcontainer setups. The images aren't built from these.
 - `.devcontainer/` – devcontainer for working on this repo. It builds `src/splunk` with a pinned version.
 
