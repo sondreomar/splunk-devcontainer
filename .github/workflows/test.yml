@@ -27,7 +27,6 @@ jobs:
     uses: ./.github/workflows/prepare.yml
     with:
       image_tag: v0.0.0
-      all_versions: true
 
   build:
     needs: versions

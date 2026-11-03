@@ -49,14 +49,14 @@ For each built version, `build-image.yml` adds these floating tags, each with a 
 
 | Tag | Points to |
 | --- | --- |
-| `X.Y.Z` | latest active `X.Y.Z.N` |
-| `X.Y` | latest active version in that minor line |
-| `X` | latest active version in that major line |
-| `latest` | latest active version overall |
+| `X.Y.Z` | latest `X.Y.Z.N` |
+| `X.Y` | latest version in that minor line |
+| `X` | latest version in that major line |
+| `latest` | latest version overall |
 
 The version tags (including the full `X.Y.Z.N` tag) also get `-v<image version>`, `-v<image minor>` and `-v<image major>` variants, e.g. `10.6-uf-v1.2.3` or `10.6-slim-v1.2.3`. `latest`, `latest-slim` and `latest-uf` don't, so tags like `latest-v1.2.3` don't exist.
 
-The tags are worked out only from active versions. A plain `X.Y.Z` is left out of the build when an active `X.Y.Z.N` exists, so two builds never push the same tag.
+The tags are worked out from every version in `splunk-versions.json`, and only the build of the version a tag points to pushes it. Building only some versions therefore never moves a tag to an older version. A plain `X.Y.Z` is left out of the build when an `X.Y.Z.N` exists, so two builds never push the same tag.
 
 ## Building locally
 
