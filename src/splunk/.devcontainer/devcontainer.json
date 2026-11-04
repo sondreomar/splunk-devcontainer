@@ -5,7 +5,8 @@
         "args": {
             "SPLUNK_VERSION": "${localEnv:SPLUNK_VERSION}",
             "SPLUNK_BUILD": "${localEnv:SPLUNK_BUILD}",
-            "SPLUNK_PLATFORM": "${localEnv:SPLUNK_PLATFORM}"
+            "SPLUNK_PLATFORM": "${localEnv:SPLUNK_PLATFORM}",
+            "SPLUNK_SLIM": "${localEnv:SPLUNK_SLIM}"
         }
     },
     "overrideCommand": false,

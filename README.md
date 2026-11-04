@@ -23,10 +23,13 @@ The image can also be extended with additional devcontainer features, for exampl
 
 ## Available Variants
 
-| Image                                           | Description                | Version suffix | Latest Version                                     |
-| ----------------------------------------------- | -------------------------- | -------------- | -------------------------------------------------- |
-| [splunk](./src/splunk/)                         | Splunk Enterprise          |                | `ghcr.io/sondreomar/splunk-devcontainer:latest`    |
-| [universalforwarder](./src/universalforwarder/) | Splunk Universal Forwarder | -uf            | `ghcr.io/sondreomar/splunk-devcontainer:latest-uf` |
+| Image                                           | Description                                | Version suffix | Latest Version                                       |
+| ----------------------------------------------- | ------------------------------------------ | -------------- | ---------------------------------------------------- |
+| [splunk](./src/splunk/)                         | Splunk Enterprise                          |                | `ghcr.io/sondreomar/splunk-devcontainer:latest`      |
+| [splunk](./src/splunk/)                         | Splunk Enterprise without rarely used apps | -slim          | `ghcr.io/sondreomar/splunk-devcontainer:latest-slim` |
+| [universalforwarder](./src/universalforwarder/) | Splunk Universal Forwarder                 | -uf            | `ghcr.io/sondreomar/splunk-devcontainer:latest-uf`   |
+
+The slim image leaves out the apps listed in [splunk_exclude](./src/splunk/.devcontainer/splunk_exclude) to reduce the image size, and removes them from Splunk's manifest so the file integrity check doesn't report them as missing.
 
 ## Image Tags
 
@@ -41,7 +44,7 @@ Images are tagged with both the Splunk version and the devcontainer image versio
 - `<splunk-patch>` - Latest Splunk maintenance version for a patch release (e.g., `10.6.1` for `10.6.1.1`)
 - `latest` - Latest supported Splunk version with latest devcontainer image
 
-For Universal Forwarder, append `-uf` to any tag (e.g., `10.2.0-uf`, `10.2.0-v1.0.0-uf`).
+For the slim image or the Universal Forwarder, add `-slim` or `-uf` after the Splunk version (e.g., `10.2.0-slim`, `10.2.0-uf-v1.0.0`, `latest-uf`).
 
 ## Example Usage
 
@@ -53,4 +56,4 @@ For Universal Forwarder, append `-uf` to any tag (e.g., `10.2.0-uf`, `10.2.0-v1.
 
 ## Building from Source
 
-To build the image devcontainer from source, simply use the `devcontainer.json` in [**./src/splunk**](./src/splunk) or [**./src/universalforwarder**](./src/universalforwarder) and supply build arguments for the desired Splunk version. See [splunk-versions.json](./.github/splunk-versions.json) for build arguments for supported versions, or [Splunk's previous releases](https://www.splunk.com/en_us/download/previous-releases.html) for other versions.
+To build the image devcontainer from source, simply use the `devcontainer.json` in [**./src/splunk**](./src/splunk) or [**./src/universalforwarder**](./src/universalforwarder) and supply build arguments for the desired Splunk version. See [splunk-versions.json](./.github/splunk-versions.json) for build arguments for supported versions, or [Splunk's previous releases](https://www.splunk.com/en_us/download/previous-releases.html) for other versions. Set `SPLUNK_SLIM=true` to build the slim Splunk Enterprise image.

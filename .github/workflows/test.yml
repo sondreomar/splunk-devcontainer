@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       all_versions:
-        description: "Build all versions, including inactive"
+        description: "Build all versions, not just the newest in each minor line"
         type: boolean
         default: false
 
@@ -27,12 +27,21 @@ jobs:
     uses: ./.github/workflows/prepare.yml
     with:
       image_tag: v0.0.0
-      all_versions: ${{ inputs.all_versions || false }}
+      build: ${{ inputs.all_versions && 'all' || 'test' }}
 
   build:
     needs: versions
+    if: needs.versions.outputs.splunk_builds != '[]'
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [splunk, splunk-slim, universalforwarder]
     uses: ./.github/workflows/build-image.yml
     with:
+      variant: ${{ matrix.variant }}
+      versions: ${{ needs.versions.outputs.splunk_builds }}
+      # All three variants run at once, so 18 builds at most
+      max_parallel: 6
       image_version: ${{ needs.versions.outputs.image_version }}
       image_major: ${{ needs.versions.outputs.image_major }}
       image_minor: ${{ needs.versions.outputs.image_minor }}
@@ -40,4 +49,3 @@ jobs:
       splunk_major: ${{ needs.versions.outputs.splunk_major }}
       splunk_minor: ${{ needs.versions.outputs.splunk_minor }}
       splunk_patch: ${{ needs.versions.outputs.splunk_patch }}
-      all_versions: ${{ inputs.all_versions || false }}

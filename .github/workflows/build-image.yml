@@ -3,6 +3,14 @@ name: Build devcontainer image
 on:
   workflow_call:
     inputs:
+      variant:
+        description: "Image variant to build: splunk, splunk-slim or universalforwarder"
+        required: true
+        type: string
+      versions:
+        description: "JSON array of the versions to build, each with version, build and platform"
+        required: true
+        type: string
       image_version:
         description: "Image semver version (X.Y.Z)"
         required: true
@@ -41,11 +49,11 @@ on:
         required: false
         type: boolean
         default: false
-      all_versions:
-        description: "Build all versions, including inactive"
+      max_parallel:
+        description: "Maximum number of versions to build at the same time"
         required: false
-        type: boolean
-        default: false
+        type: number
+        default: 15
 
 env:
   REGISTRY: ghcr.io
@@ -56,32 +64,31 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.parse.outputs.matrix }}
+      workspace: ${{ steps.variant.outputs.workspace }}
+      suffix: ${{ steps.variant.outputs.suffix }}
+      slim: ${{ steps.variant.outputs.slim }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          sparse-checkout: .github/splunk-versions.json
-          sparse-checkout-cone-mode: false
+      - name: Variant
+        id: variant
+        env:
+          VARIANT: ${{ inputs.variant }}
+        run: |
+          case "$VARIANT" in
+            splunk) workspace=splunk suffix= slim= ;;
+            splunk-slim) workspace=splunk suffix=-slim slim=true ;;
+            universalforwarder) workspace=universalforwarder suffix=-uf slim= ;;
+            *) echo "::error::Unknown variant: $VARIANT"; exit 1 ;;
+          esac
+          echo "workspace=$workspace" >> $GITHUB_OUTPUT
+          echo "suffix=$suffix" >> $GITHUB_OUTPUT
+          echo "slim=$slim" >> $GITHUB_OUTPUT
 
-      - name: Parse versions
+      - name: Matrix
         id: parse
         env:
-          ALL_VERSIONS: ${{ inputs.all_versions }}
+          VERSIONS: ${{ inputs.versions }}
         run: |
-          filter='[.[] | select(.active)]'
-          if [[ "$ALL_VERSIONS" == "true" ]]; then
-            filter='.'
-          fi
-          # Skip X.Y.Z when an X.Y.Z.N exists, as the latter owns the X.Y.Z tag
-          superseded='. as $all | map(select(.version as $v | $all | any(.version | startswith($v + ".")) | not))'
-          matrix=$(jq -c "$filter | $superseded | {
-            variant: [\"splunk\", \"universalforwarder\"],
-            version: [.[].version],
-            include: ([
-              {variant: \"splunk\", suffix: \"\"},
-              {variant: \"universalforwarder\", suffix: \"-uf\"}
-            ] + .)
-          }" .github/splunk-versions.json)
+          matrix=$(echo "$VERSIONS" | jq -c '{version: map(.version), include: .}')
           echo "matrix=$matrix" >> $GITHUB_OUTPUT
 
   image:
@@ -91,6 +98,7 @@ jobs:
 
     strategy:
       fail-fast: ${{ !inputs.allow_failures }}
+      max-parallel: ${{ inputs.max_parallel }}
       matrix: ${{ fromJson(needs.setup.outputs.matrix) }}
 
     steps:
@@ -131,8 +139,9 @@ jobs:
 
       - name: Build
         env:
-          VARIANT: ${{ matrix.variant }}
-          SUFFIX: ${{ matrix.suffix }}
+          WORKSPACE: ${{ needs.setup.outputs.workspace }}
+          SUFFIX: ${{ needs.setup.outputs.suffix }}
+          SPLUNK_SLIM: ${{ needs.setup.outputs.slim }}
           SPLUNK_VERSION: ${{ matrix.version }}
           SPLUNK_BUILD: ${{ matrix.build }}
           SPLUNK_PLATFORM: ${{ matrix.platform }}
@@ -146,7 +155,7 @@ jobs:
           IMAGE_MINOR: ${{ inputs.image_minor }}
         run: |
           devcontainer build \
-            --workspace-folder $GITHUB_WORKSPACE/src/$VARIANT \
+            --workspace-folder $GITHUB_WORKSPACE/src/$WORKSPACE \
             --image-name $IMAGE_REF:$SPLUNK_VERSION$SUFFIX \
             --image-name $IMAGE_REF:$SPLUNK_VERSION$SUFFIX-v$IMAGE_VERSION \
             --image-name $IMAGE_REF:$SPLUNK_VERSION$SUFFIX-v$IMAGE_MINOR \
@@ -165,12 +174,73 @@ jobs:
             ${SPLUNK_MAJOR:+--image-name $IMAGE_REF:${SPLUNK_MAJOR}${SUFFIX}-v${IMAGE_MAJOR}} \
             ${SPLUNK_LATEST:+--image-name $IMAGE_REF:latest${SUFFIX}}
 
+      - name: Smoke test
+        env:
+          IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.version }}${{ needs.setup.outputs.suffix }}
+          WORKSPACE: ${{ needs.setup.outputs.workspace }}
+        run: |
+          setup=
+          if [[ "$WORKSPACE" == universalforwarder ]]; then
+            # The forwarder only offers management over a local socket by default
+            setup='mkdir -p "$SPLUNK_HOME/etc/system/local" && printf "[httpServer]\nmgmtMode = tcp\ndisableDefaultPort = false\n" > "$SPLUNK_HOME/etc/system/local/server.conf" && chown -R splunk:splunk "$SPLUNK_HOME/etc/system/local" && '
+          fi
+          docker run -d --name smoke -e SPLUNK_START_ARGS=--accept-license -e SPLUNK_PASSWORD=smoketest \
+            --entrypoint sh "$IMAGE" -c "${setup}exec /sbin/entrypoint.sh"
+          trap 'docker rm -f -v smoke > /dev/null' EXIT
+          api() { docker exec smoke curl -sfk --connect-timeout 5 --max-time 30 -u admin:smoketest "https://localhost:8089$1"; }
+          web() { docker exec smoke curl -sf --connect-timeout 5 --max-time 30 -o /dev/null "http://localhost:8000$1"; }
+          splunkd_up() { api /services/server/info > /dev/null; }
+          kvstore_ready() { [[ "$(api '/services/kvstore/status?output_mode=json' | jq -r '.entry[0].content.current.status')" == ready ]]; }
+
+          wait_for() {
+            local error=$1 deadline=$((SECONDS + $2)) timeout=$2
+            shift 2
+            while ((SECONDS < deadline)); do
+              "$@" && return 0
+              if [[ "$(docker inspect -f '{{.State.Running}}' smoke)" != "true" ]]; then
+                docker logs smoke
+                echo "::error::Container exited during startup"
+                exit 1
+              fi
+              sleep 5
+            done
+            docker logs smoke
+            echo "::error::$error within $((timeout / 60)) minutes"
+            exit 1
+          }
+
+          wait_for "Splunk didn't respond on port 8089" 300 splunkd_up
+
+          validate_status=0
+          validate=$(docker exec -u splunk smoke sh -c '"$SPLUNK_HOME/bin/splunk" validate files' 2>&1) || validate_status=$?
+          echo "$validate"
+          if ((validate_status != 0)) || ! grep -q "All installed files intact" <<< "$validate"; then
+            echo "::error::Installed files don't match Splunk's manifest"
+            exit 1
+          fi
+
+          if [[ "$WORKSPACE" == splunk ]]; then
+            wait_for "KV store wasn't ready" 180 kvstore_ready
+            wait_for "Splunk Web didn't respond on port 8000" 120 web /en-US/account/login
+            if ! web /en-US/static/js/i18n.js; then
+              echo "::error::Splunk Web didn't serve its static files"
+              exit 1
+            fi
+          fi
+
+          messages=$(api '/services/messages?output_mode=json&count=0' | jq -r '.entry[].content.message')
+          echo "$messages"
+          if grep -qi integrity <<< "$messages"; then
+            echo "::error::Splunk reported a file integrity problem"
+            exit 1
+          fi
+
       - name: Push
         if: inputs.push
         id: push
         env:
           IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          VERSION_TAG: ${{ matrix.version }}${{ matrix.suffix }}
+          VERSION_TAG: ${{ matrix.version }}${{ needs.setup.outputs.suffix }}
         run: |
           docker push --all-tags $IMAGE_REF
           digest=$(docker inspect --format='{{index .RepoDigests 0}}' "$IMAGE_REF:$VERSION_TAG" | cut -d@ -f2)

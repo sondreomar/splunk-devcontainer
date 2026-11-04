@@ -2,373 +2,311 @@
     {
         "version": "9.3.2",
         "build": "d8bb32809498",
-        "platform": "Linux-x86_64",
-        "active": false
+        "platform": "Linux-x86_64"
     },
     {
         "version": "9.3.3",
         "build": "75595d8f83ef",
-        "platform": "Linux-x86_64",
-        "active": false
+        "platform": "Linux-x86_64"
     },
     {
         "version": "9.3.4",
         "build": "30e72d3fb5f7",
-        "platform": "Linux-x86_64",
-        "active": false
+        "platform": "Linux-x86_64"
     },
     {
         "version": "9.3.5",
         "build": "9848f25c9430",
-        "platform": "Linux-x86_64",
-        "active": false
+        "platform": "Linux-x86_64"
     },
     {
         "version": "9.3.6",
         "build": "8c495c6a1f7d",
-        "platform": "Linux-x86_64",
-        "active": false
+        "platform": "Linux-x86_64"
     },
     {
         "version": "9.3.7",
         "build": "d3040138454b",
-        "platform": "Linux-x86_64",
-        "active": false
+        "platform": "Linux-x86_64"
     },
     {
         "version": "9.3.8",
         "build": "fbf0510dff69",
-        "platform": "Linux-x86_64",
-        "active": false
+        "platform": "Linux-x86_64"
     },
     {
         "version": "9.3.9",
         "build": "305ee211181f",
-        "platform": "Linux-x86_64",
-        "active": false
+        "platform": "Linux-x86_64"
     },
     {
         "version": "9.3.10",
         "build": "ec8fc22ae0e4",
-        "platform": "Linux-x86_64",
-        "active": false
+        "platform": "Linux-x86_64"
     },
     {
         "version": "9.3.11",
         "build": "0c8d350423a0",
-        "platform": "Linux-x86_64",
-        "active": false
+        "platform": "Linux-x86_64"
     },
     {
         "version": "9.3.12",
         "build": "c3c164f2e6c4",
-        "platform": "Linux-x86_64",
-        "active": false
+        "platform": "Linux-x86_64"
     },
     {
         "version": "9.3.13",
         "build": "688758e24bbe",
-        "platform": "Linux-x86_64",
-        "active": false
+        "platform": "Linux-x86_64"
     },
     {
         "version": "9.3.14",
         "build": "02bbaf562558",
-        "platform": "Linux-x86_64",
-        "active": false
+        "platform": "Linux-x86_64"
     },
     {
         "version": "9.4.0",
         "build": "6b4ebe426ca6",
-        "platform": "linux-amd64",
-        "active": false
+        "platform": "linux-amd64"
     },
     {
         "version": "9.4.1",
         "build": "e3bdab203ac8",
-        "platform": "linux-amd64",
-        "active": false
+        "platform": "linux-amd64"
     },
     {
         "version": "9.4.2",
         "build": "e9664af3d956",
-        "platform": "linux-amd64",
-        "active": false
+        "platform": "linux-amd64"
     },
     {
         "version": "9.4.3",
         "build": "237ebbd22314",
-        "platform": "linux-amd64",
-        "active": false
+        "platform": "linux-amd64"
     },
     {
         "version": "9.4.4",
         "build": "f627d88b766b",
-        "platform": "linux-amd64",
-        "active": false
+        "platform": "linux-amd64"
     },
     {
         "version": "9.4.5",
         "build": "8fb2a6c586a5",
-        "platform": "linux-amd64",
-        "active": false
+        "platform": "linux-amd64"
     },
     {
         "version": "9.4.6",
         "build": "60284236e579",
-        "platform": "linux-amd64",
-        "active": false
+        "platform": "linux-amd64"
     },
     {
         "version": "9.4.7",
         "build": "2a9293b80994",
-        "platform": "linux-amd64",
-        "active": false
+        "platform": "linux-amd64"
     },
     {
         "version": "9.4.8",
         "build": "c543277b24fa",
-        "platform": "linux-amd64",
-        "active": false
+        "platform": "linux-amd64"
     },
     {
         "version": "9.4.9",
         "build": "03bb451d4e07",
-        "platform": "linux-amd64",
-        "active": false
+        "platform": "linux-amd64"
     },
     {
         "version": "9.4.10",
         "build": "3673ab0c12ee",
-        "platform": "linux-amd64",
-        "active": false
+        "platform": "linux-amd64"
     },
     {
         "version": "9.4.11",
         "build": "bbcbf19b5450",
-        "platform": "linux-amd64",
-        "active": false
+        "platform": "linux-amd64"
     },
     {
         "version": "9.4.12",
         "build": "9dfc486f3d48",
-        "platform": "linux-amd64",
-        "active": false
+        "platform": "linux-amd64"
     },
     {
         "version": "9.4.13",
         "build": "1d070b2427bf",
-        "platform": "linux-amd64",
-        "active": false
+        "platform": "linux-amd64"
     },
     {
         "version": "9.4.14",
         "build": "ef36026efe9c",
-        "platform": "linux-amd64",
-        "active": false
+        "platform": "linux-amd64"
     },
     {
         "version": "9.4.15",
         "build": "ae018c4ea857",
-        "platform": "linux-amd64",
-        "active": false
+        "platform": "linux-amd64"
     },
     {
         "version": "9.4.16",
         "build": "fbe3c1243d26",
-        "platform": "linux-amd64",
-        "active": true
+        "platform": "linux-amd64"
     },
     {
         "version": "9.4.17",
         "build": "1b0c587000b8",
-        "platform": "linux-amd64",
-        "active": true
+        "platform": "linux-amd64"
     },
     {
         "version": "10.0.0",
         "build": "e8eb0c4654f8",
-        "platform": "linux-amd64",
-        "active": false
+        "platform": "linux-amd64"
     },
     {
         "version": "10.0.1",
         "build": "c486717c322b",
-        "platform": "linux-amd64",
-        "active": false
+        "platform": "linux-amd64"
     },
     {
         "version": "10.0.2",
         "build": "e2d18b4767e9",
-        "platform": "linux-amd64",
-        "active": false
+        "platform": "linux-amd64"
     },
     {
         "version": "10.0.3",
         "build": "adbac1c8811c",
-        "platform": "linux-amd64",
-        "active": false
+        "platform": "linux-amd64"
     },
     {
         "version": "10.0.4",
         "build": "5ea723e837ec",
-        "platform": "linux-amd64",
-        "active": false
+        "platform": "linux-amd64"
     },
     {
         "version": "10.0.5",
         "build": "3d2e2618f448",
-        "platform": "linux-amd64",
-        "active": false
+        "platform": "linux-amd64"
     },
     {
         "version": "10.0.6",
         "build": "098ea5cc39ba",
-        "platform": "linux-amd64",
-        "active": false
+        "platform": "linux-amd64"
     },
     {
         "version": "10.0.7",
         "build": "d24b16fd5f20",
-        "platform": "linux-amd64",
-        "active": false
+        "platform": "linux-amd64"
     },
     {
         "version": "10.0.8",
         "build": "3b58f6d0a3f6",
-        "platform": "linux-amd64",
-        "active": false
+        "platform": "linux-amd64"
     },
     {
         "version": "10.0.9",
         "build": "580016365a30",
-        "platform": "linux-amd64",
-        "active": false
+        "platform": "linux-amd64"
     },
     {
         "version": "10.0.10",
         "build": "c66ca3846eb8",
-        "platform": "linux-amd64",
-        "active": false
+        "platform": "linux-amd64"
     },
     {
         "version": "10.0.11",
         "build": "c1c0c3ccd7cb",
-        "platform": "linux-amd64",
-        "active": true
+        "platform": "linux-amd64"
     },
     {
         "version": "10.0.12",
         "build": "e3ec63dc1d02",
-        "platform": "linux-amd64",
-        "active": true
+        "platform": "linux-amd64"
     },
     {
         "version": "10.2.0",
         "build": "d749cb17ea65",
-        "platform": "linux-amd64",
-        "active": false
+        "platform": "linux-amd64"
     },
     {
         "version": "10.2.1",
         "build": "c892b66d163d",
-        "platform": "linux-amd64",
-        "active": false
+        "platform": "linux-amd64"
     },
     {
         "version": "10.2.2",
         "build": "80b90d638de6",
-        "platform": "linux-amd64",
-        "active": false
+        "platform": "linux-amd64"
     },
     {
         "version": "10.2.3",
         "build": "4d61cf8a5c0c",
-        "platform": "linux-amd64",
-        "active": false
+        "platform": "linux-amd64"
     },
     {
         "version": "10.2.4",
         "build": "1526e5e5df42",
-        "platform": "linux-amd64",
-        "active": false
+        "platform": "linux-amd64"
     },
     {
         "version": "10.2.5",
         "build": "1d180ea50aed",
-        "platform": "linux-amd64",
-        "active": false
+        "platform": "linux-amd64"
     },
     {
         "version": "10.2.6",
         "build": "bcdcf0552e0c",
-        "platform": "linux-amd64",
-        "active": false
+        "platform": "linux-amd64"
     },
     {
         "version": "10.2.7",
         "build": "c0bff5b0fac3",
-        "platform": "linux-amd64",
-        "active": false
+        "platform": "linux-amd64"
     },
     {
         "version": "10.2.8",
         "build": "981c2d735e4d",
-        "platform": "linux-amd64",
-        "active": true
+        "platform": "linux-amd64"
     },
     {
         "version": "10.2.9",
         "build": "41bebfa38eb4",
-        "platform": "linux-amd64",
-        "active": true
+        "platform": "linux-amd64"
     },
     {
         "version": "10.4.0",
         "build": "f798d4d49089",
-        "platform": "linux-amd64",
-        "active": false
+        "platform": "linux-amd64"
     },
     {
         "version": "10.4.1",
         "build": "5a009d941268",
-        "platform": "linux-amd64",
-        "active": false
+        "platform": "linux-amd64"
     },
     {
         "version": "10.4.2",
         "build": "33c3bf42cd73",
-        "platform": "linux-amd64",
-        "active": false
+        "platform": "linux-amd64"
     },
     {
         "version": "10.4.3",
         "build": "4174a2deda5d",
-        "platform": "linux-amd64",
-        "active": false
+        "platform": "linux-amd64"
     },
     {
         "version": "10.4.4",
         "build": "f0f12fcdcaa1",
-        "platform": "linux-amd64",
-        "active": true
+        "platform": "linux-amd64"
     },
     {
         "version": "10.4.5",
         "build": "de9225ad9740",
-        "platform": "linux-amd64",
-        "active": true
+        "platform": "linux-amd64"
     },
     {
         "version": "10.6.0.5",
         "build": "86587d4e3b27",
-        "platform": "linux-amd64",
-        "active": true
+        "platform": "linux-amd64"
     },
     {
         "version": "10.6.1.1",
         "build": "b2ae2962645c",
-        "platform": "linux-amd64",
-        "active": true
+        "platform": "linux-amd64"
     }
 ]
