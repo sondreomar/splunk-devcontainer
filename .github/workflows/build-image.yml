@@ -211,9 +211,10 @@ jobs:
 
           wait_for "Splunk didn't respond on port 8089" 300 splunkd_up
 
-          validate=$(docker exec -u splunk smoke sh -c '"$SPLUNK_HOME/bin/splunk" validate files' 2>&1)
+          validate_status=0
+          validate=$(docker exec -u splunk smoke sh -c '"$SPLUNK_HOME/bin/splunk" validate files' 2>&1) || validate_status=$?
           echo "$validate"
-          if ! grep -q "All installed files intact" <<< "$validate"; then
+          if ((validate_status != 0)) || ! grep -q "All installed files intact" <<< "$validate"; then
             echo "::error::Installed files don't match Splunk's manifest"
             exit 1
           fi
