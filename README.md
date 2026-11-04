@@ -23,11 +23,11 @@ The image can also be extended with additional devcontainer features, for exampl
 
 ## Available Variants
 
-| Image                                           | Description                                     | Version suffix | Latest Version                                       |
-| ----------------------------------------------- | ----------------------------------------------- | -------------- | ---------------------------------------------------- |
-| [splunk](./src/splunk/)                         | Splunk Enterprise                               |                | `ghcr.io/sondreomar/splunk-devcontainer:latest`      |
-| [splunk](./src/splunk/)                         | Splunk Enterprise without rarely used apps      | -slim          | `ghcr.io/sondreomar/splunk-devcontainer:latest-slim` |
-| [universalforwarder](./src/universalforwarder/) | Splunk Universal Forwarder                      | -uf            | `ghcr.io/sondreomar/splunk-devcontainer:latest-uf`   |
+| Image                                           | Description                                | Version suffix | Latest Version                                       |
+| ----------------------------------------------- | ------------------------------------------ | -------------- | ---------------------------------------------------- |
+| [splunk](./src/splunk/)                         | Splunk Enterprise                          |                | `ghcr.io/sondreomar/splunk-devcontainer:latest`      |
+| [splunk](./src/splunk/)                         | Splunk Enterprise without rarely used apps | -slim          | `ghcr.io/sondreomar/splunk-devcontainer:latest-slim` |
+| [universalforwarder](./src/universalforwarder/) | Splunk Universal Forwarder                 | -uf            | `ghcr.io/sondreomar/splunk-devcontainer:latest-uf`   |
 
 The slim image leaves out the apps listed in [splunk_exclude](./src/splunk/.devcontainer/splunk_exclude) to reduce the image size, and removes them from Splunk's manifest so the file integrity check doesn't report them as missing.
 
