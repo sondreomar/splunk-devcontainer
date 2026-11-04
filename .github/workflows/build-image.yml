@@ -170,6 +170,43 @@ jobs:
             ${SPLUNK_MAJOR:+--image-name $IMAGE_REF:${SPLUNK_MAJOR}${SUFFIX}-v${IMAGE_MAJOR}} \
             ${SPLUNK_LATEST:+--image-name $IMAGE_REF:latest${SUFFIX}}
 
+      - name: Smoke test
+        env:
+          IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.version }}${{ needs.setup.outputs.suffix }}
+        run: |
+          docker run -d --name smoke -e SPLUNK_START_ARGS=--accept-license -e SPLUNK_PASSWORD=smoketest "$IMAGE"
+          trap 'docker rm -f -v smoke > /dev/null' EXIT
+          api() { docker exec smoke curl -sfk -u admin:smoketest "https://localhost:8089$1"; }
+
+          for i in $(seq 1 60); do
+            if [[ "$(docker inspect -f '{{.State.Running}}' smoke)" != "true" ]]; then
+              docker logs smoke
+              echo "::error::Container exited during startup"
+              exit 1
+            fi
+            api /services/server/info > /dev/null && break
+            sleep 5
+          done
+          if ! api /services/server/info > /dev/null; then
+            docker logs smoke
+            echo "::error::Splunk didn't respond on port 8089 within 5 minutes"
+            exit 1
+          fi
+
+          validate=$(docker exec -u splunk smoke sh -c '"$SPLUNK_HOME/bin/splunk" validate files' 2>&1)
+          echo "$validate"
+          if ! grep -q "All installed files intact" <<< "$validate"; then
+            echo "::error::Installed files don't match Splunk's manifest"
+            exit 1
+          fi
+
+          messages=$(api '/services/messages?output_mode=json&count=0' | jq -r '.entry[].content.message')
+          echo "$messages"
+          if grep -qi integrity <<< "$messages"; then
+            echo "::error::Splunk reported a file integrity problem"
+            exit 1
+          fi
+
       - name: Push
         if: inputs.push
         id: push
