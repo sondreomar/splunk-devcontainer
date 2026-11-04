@@ -49,6 +49,11 @@ on:
         required: false
         type: boolean
         default: false
+      max_parallel:
+        description: "Maximum number of versions to build at the same time"
+        required: false
+        type: number
+        default: 15
 
 env:
   REGISTRY: ghcr.io
@@ -93,8 +98,7 @@ jobs:
 
     strategy:
       fail-fast: ${{ !inputs.allow_failures }}
-      # Leave some of the account's 20 concurrent jobs free for other workflows
-      max-parallel: 15
+      max-parallel: ${{ inputs.max_parallel }}
       matrix: ${{ fromJson(needs.setup.outputs.matrix) }}
 
     steps:
@@ -173,8 +177,15 @@ jobs:
       - name: Smoke test
         env:
           IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.version }}${{ needs.setup.outputs.suffix }}
+          WORKSPACE: ${{ needs.setup.outputs.workspace }}
         run: |
-          docker run -d --name smoke -e SPLUNK_START_ARGS=--accept-license -e SPLUNK_PASSWORD=smoketest "$IMAGE"
+          setup=
+          if [[ "$WORKSPACE" == universalforwarder ]]; then
+            # The forwarder only offers management over a local socket by default
+            setup='mkdir -p "$SPLUNK_HOME/etc/system/local" && printf "[httpServer]\nmgmtMode = tcp\ndisableDefaultPort = false\n" > "$SPLUNK_HOME/etc/system/local/server.conf" && chown -R splunk:splunk "$SPLUNK_HOME/etc/system/local" && '
+          fi
+          docker run -d --name smoke -e SPLUNK_START_ARGS=--accept-license -e SPLUNK_PASSWORD=smoketest \
+            --entrypoint sh "$IMAGE" -c "${setup}exec /sbin/entrypoint.sh"
           trap 'docker rm -f -v smoke > /dev/null' EXIT
           api() { docker exec smoke curl -sfk -u admin:smoketest "https://localhost:8089$1"; }
 

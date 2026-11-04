@@ -34,14 +34,14 @@ jobs:
     if: needs.versions.outputs.splunk_builds != '[]'
     strategy:
       fail-fast: false
-      # One variant at a time, as each already runs up to 15 builds in parallel
-      max-parallel: 1
       matrix:
         variant: [splunk, splunk-slim, universalforwarder]
     uses: ./.github/workflows/build-image.yml
     with:
       variant: ${{ matrix.variant }}
       versions: ${{ needs.versions.outputs.splunk_builds }}
+      # All three variants run at once, so 18 builds at most
+      max_parallel: 6
       image_version: ${{ needs.versions.outputs.image_version }}
       image_major: ${{ needs.versions.outputs.image_major }}
       image_minor: ${{ needs.versions.outputs.image_minor }}
