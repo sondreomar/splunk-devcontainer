@@ -187,15 +187,15 @@ jobs:
           docker run -d --name smoke -e SPLUNK_START_ARGS=--accept-license -e SPLUNK_PASSWORD=smoketest \
             --entrypoint sh "$IMAGE" -c "${setup}exec /sbin/entrypoint.sh"
           trap 'docker rm -f -v smoke > /dev/null' EXIT
-          api() { docker exec smoke curl -sfk -u admin:smoketest "https://localhost:8089$1"; }
-          web() { docker exec smoke curl -sf -o /dev/null "http://localhost:8000$1"; }
+          api() { docker exec smoke curl -sfk --connect-timeout 5 --max-time 30 -u admin:smoketest "https://localhost:8089$1"; }
+          web() { docker exec smoke curl -sf --connect-timeout 5 --max-time 30 -o /dev/null "http://localhost:8000$1"; }
           splunkd_up() { api /services/server/info > /dev/null; }
           kvstore_ready() { [[ "$(api '/services/kvstore/status?output_mode=json' | jq -r '.entry[0].content.current.status')" == ready ]]; }
 
           wait_for() {
-            local error=$1 timeout=$2
+            local error=$1 deadline=$((SECONDS + $2)) timeout=$2
             shift 2
-            for ((elapsed = 0; elapsed < timeout; elapsed += 5)); do
+            while ((SECONDS < deadline)); do
               "$@" && return 0
               if [[ "$(docker inspect -f '{{.State.Running}}' smoke)" != "true" ]]; then
                 docker logs smoke
