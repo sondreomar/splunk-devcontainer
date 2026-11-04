@@ -188,27 +188,43 @@ jobs:
             --entrypoint sh "$IMAGE" -c "${setup}exec /sbin/entrypoint.sh"
           trap 'docker rm -f -v smoke > /dev/null' EXIT
           api() { docker exec smoke curl -sfk -u admin:smoketest "https://localhost:8089$1"; }
+          web() { docker exec smoke curl -sf -o /dev/null "http://localhost:8000$1"; }
+          splunkd_up() { api /services/server/info > /dev/null; }
+          kvstore_ready() { [[ "$(api '/services/kvstore/status?output_mode=json' | jq -r '.entry[0].content.current.status')" == ready ]]; }
 
-          for i in $(seq 1 60); do
-            if [[ "$(docker inspect -f '{{.State.Running}}' smoke)" != "true" ]]; then
-              docker logs smoke
-              echo "::error::Container exited during startup"
-              exit 1
-            fi
-            api /services/server/info > /dev/null && break
-            sleep 5
-          done
-          if ! api /services/server/info > /dev/null; then
+          wait_for() {
+            local error=$1 timeout=$2
+            shift 2
+            for ((elapsed = 0; elapsed < timeout; elapsed += 5)); do
+              "$@" && return 0
+              if [[ "$(docker inspect -f '{{.State.Running}}' smoke)" != "true" ]]; then
+                docker logs smoke
+                echo "::error::Container exited during startup"
+                exit 1
+              fi
+              sleep 5
+            done
             docker logs smoke
-            echo "::error::Splunk didn't respond on port 8089 within 5 minutes"
+            echo "::error::$error within $((timeout / 60)) minutes"
             exit 1
-          fi
+          }
+
+          wait_for "Splunk didn't respond on port 8089" 300 splunkd_up
 
           validate=$(docker exec -u splunk smoke sh -c '"$SPLUNK_HOME/bin/splunk" validate files' 2>&1)
           echo "$validate"
           if ! grep -q "All installed files intact" <<< "$validate"; then
             echo "::error::Installed files don't match Splunk's manifest"
             exit 1
+          fi
+
+          if [[ "$WORKSPACE" == splunk ]]; then
+            wait_for "KV store wasn't ready" 180 kvstore_ready
+            wait_for "Splunk Web didn't respond on port 8000" 120 web /en-US/account/login
+            if ! web /en-US/static/js/i18n.js; then
+              echo "::error::Splunk Web didn't serve its static files"
+              exit 1
+            fi
           fi
 
           messages=$(api '/services/messages?output_mode=json&count=0' | jq -r '.entry[].content.message')
