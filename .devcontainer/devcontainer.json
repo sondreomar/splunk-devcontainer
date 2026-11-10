@@ -3,9 +3,10 @@
         "dockerfile": "../src/splunk/.devcontainer/Dockerfile",
         "context": "../src/splunk/.devcontainer",
         "args": {
-            "SPLUNK_VERSION": "10.4.0",
-            "SPLUNK_BUILD": "f798d4d49089",
-            "SPLUNK_PLATFORM": "linux-amd64"
+            "SPLUNK_VERSION": "10.6.1.1",
+            "SPLUNK_BUILD": "b2ae2962645c",
+            "SPLUNK_PLATFORM": "linux-amd64",
+            "SPLUNK_SLIM": "true"
         }
     },
     "overrideCommand": false,
