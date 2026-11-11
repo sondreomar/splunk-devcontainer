@@ -11,7 +11,7 @@ Devcontainer images for local Splunk development, published to `ghcr.io/sondreom
   - Each variant has its own matrix, so the 256-jobs-per-matrix limit applies per variant. Releases build one variant at a time with up to 15 builds in parallel, and tests build all variants at once with up to 6 each, so other workflows still get runners.
   - Releases build the versions added since the previous release tag. If `src/` or `build-image.yml` changed since then, they also rebuild the newest version in each minor line.
   - PRs build the newest version in each minor line, plus any versions the PR adds.
-  - Dispatch `release.yml` (on a tag) or `test.yml` with `all_versions` to build every version.
+  - Dispatch `release.yml` (on a tag) or `test.yml` with `all_versions` to build every version. `release.yml` also takes a `variant` input to rebuild only one variant, e.g. every slim image after a slim-only change.
 - `examples/` – example devcontainer setups. The images aren't built from these.
 - `.devcontainer/` – devcontainer for working on this repo. It builds `src/splunk` with a pinned version.
 

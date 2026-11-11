@@ -10,6 +10,11 @@ on:
         description: "Build all versions, not just those added or affected since the previous release"
         type: boolean
         default: false
+      variant:
+        description: "Variant to build"
+        type: choice
+        options: [all, splunk, splunk-slim, universalforwarder]
+        default: all
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
@@ -30,7 +35,8 @@ jobs:
       # One variant at a time, as each already runs up to 15 builds in parallel
       max-parallel: 1
       matrix:
-        variant: [splunk, splunk-slim, universalforwarder]
+        # Tag pushes have no inputs, so they build every variant
+        variant: ${{ fromJSON((!inputs.variant || inputs.variant == 'all') && '["splunk","splunk-slim","universalforwarder"]' || format('["{0}"]', inputs.variant)) }}
     uses: ./.github/workflows/build-image.yml
     permissions:
       contents: read
