@@ -32,8 +32,6 @@ jobs:
     if: needs.versions.outputs.splunk_builds != '[]'
     strategy:
       fail-fast: false
-      # One variant at a time, as each already runs up to 15 builds in parallel
-      max-parallel: 1
       matrix:
         # Tag pushes have no inputs, so they build every variant
         variant: ${{ fromJSON((!inputs.variant || inputs.variant == 'all') && '["splunk","splunk-slim","universalforwarder"]' || format('["{0}"]', inputs.variant)) }}
@@ -47,6 +45,8 @@ jobs:
     with:
       variant: ${{ matrix.variant }}
       versions: ${{ needs.versions.outputs.splunk_builds }}
+      # 18 builds at most, split across the variants being built
+      max_parallel: ${{ (!inputs.variant || inputs.variant == 'all') && 6 || 18 }}
       image_version: ${{ needs.versions.outputs.image_version }}
       image_major: ${{ needs.versions.outputs.image_major }}
       image_minor: ${{ needs.versions.outputs.image_minor }}
