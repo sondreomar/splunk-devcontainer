@@ -1,0 +1,130 @@
+name: Benchmark
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Splunk version to benchmark (defaults to the newest in splunk-versions.json)"
+        type: string
+        default: ""
+      build:
+        description: "Build our images instead of pulling the published ones"
+        type: boolean
+        default: false
+      ref:
+        description: "Branch, tag or SHA to build our images from (defaults to the workflow's ref)"
+        type: string
+        default: ""
+      runs:
+        description: "Number of times to start and restart each image"
+        type: number
+        default: 5
+      settle:
+        description: "Seconds to wait after startup before sampling idle usage"
+        type: number
+        default: 180
+      sample:
+        description: "Seconds to sample idle CPU and memory for"
+        type: number
+        default: 300
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - name: Free disk space
+        run: |
+          sudo rm -rf \
+            /usr/share/swift \
+            /usr/share/dotnet \
+            /usr/local/lib/android \
+            /opt/hostedtoolcache/CodeQL \
+            /opt/hostedtoolcache/go
+          df . -h
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Version
+        id: version
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          entry=$(jq -c --arg v "$VERSION" 'if $v == "" then last else (map(select(.version == $v)) | first) end' .github/splunk-versions.json)
+          if [[ "$entry" == null ]]; then
+            echo "::error::$VERSION isn't in splunk-versions.json"
+            exit 1
+          fi
+          jq -r 'to_entries[] | "\(.key)=\(.value)"' <<< "$entry" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout images to build
+        if: inputs.build && inputs.ref != ''
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
+          path: build-src
+
+      - name: Buildx
+        if: inputs.build
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Node.js
+        if: inputs.build
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "20.19.4"
+
+      - name: Build
+        if: inputs.build
+        env:
+          SPLUNK_VERSION: ${{ steps.version.outputs.version }}
+          SPLUNK_BUILD: ${{ steps.version.outputs.build }}
+          SPLUNK_PLATFORM: ${{ steps.version.outputs.platform }}
+          SRC: ${{ inputs.ref != '' && 'build-src' || '.' }}
+        run: |
+          npm install -g @devcontainers/cli@0.80.0
+          for variant in splunk:splunk: splunk:splunk-slim:true universalforwarder:splunk-uf:; do
+            IFS=: read -r workspace name slim <<< "$variant"
+            suffix=${name#splunk}
+            SPLUNK_SLIM=$slim devcontainer build --workspace-folder "$SRC/src/$workspace" \
+              --image-name "local/splunk-devcontainer:$SPLUNK_VERSION$suffix"
+            docker builder prune -af > /dev/null
+          done
+
+      - name: Benchmark
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          OURS: ${{ inputs.build && 'local/splunk-devcontainer' || format('ghcr.io/{0}', github.repository) }}
+          RUNS: ${{ inputs.runs }}
+          SETTLE: ${{ inputs.settle }}
+          SAMPLE: ${{ inputs.sample }}
+          OUT: results
+        run: |
+          {
+            echo "## Splunk $VERSION"
+            echo
+            echo "Our images: \`$OURS\`. Median (min–max)."
+            echo
+          } >> "$GITHUB_STEP_SUMMARY"
+          .github/scripts/benchmark.sh \
+            "official=splunk/splunk:$VERSION" \
+            "ours=$OURS:$VERSION" \
+            "ours-slim=$OURS:$VERSION-slim" \
+            "official-uf=splunk/universalforwarder:$VERSION" \
+            "ours-uf=$OURS:$VERSION-uf" \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+          {
+            echo
+            echo "<details><summary>Raw results</summary>"
+            echo
+            echo '```tsv'
+            cat results-startup.tsv
+            echo
+            cat results-idle.tsv
+            echo '```'
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
