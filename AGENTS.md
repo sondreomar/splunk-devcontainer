@@ -8,7 +8,7 @@ Devcontainer images for local Splunk development, published to `ghcr.io/sondreom
 - `src/universalforwarder/.devcontainer/` – Universal Forwarder image, published with the `-uf` tag suffix.
 - `.github/splunk-versions.json` – every supported Splunk version (`version`, `build`, `platform`).
 - `.github/workflows/` – `prepare.yml` works out tags and which versions to build, `build-image.yml` builds and pushes one variant (`splunk`, `splunk-slim` or `universalforwarder`), `test.yml` runs on PRs, and `release.yml` runs on `vX.Y.Z` git tags.
-  - Each variant has its own matrix, so the 256-jobs-per-matrix limit applies per variant. Releases build one variant at a time with up to 15 builds in parallel, and tests build all variants at once with up to 6 each, so other workflows still get runners.
+  - Each variant has its own matrix, so the 256-jobs-per-matrix limit applies per variant. Releases and tests both build all variants at once with up to 6 builds each (a release of a single variant runs up to 18), so other workflows still get runners.
   - Releases build the versions added since the previous release tag. If `src/` or `build-image.yml` changed since then, they also rebuild the newest version in each minor line.
   - PRs build the newest version in each minor line, plus any versions the PR adds.
   - Dispatch `release.yml` (on a tag) or `test.yml` with `all_versions` to build every version. `release.yml` also takes a `variant` input to rebuild only one variant, e.g. every slim image after a slim-only change.
@@ -22,6 +22,8 @@ Devcontainer images for local Splunk development, published to `ghcr.io/sondreom
   - Only the Enterprise image has a slim variant and seeds UI config.
   - Only the forwarder image installs `systemd`, because the forwarder won't start without it.
 - Don't disable Splunk's `installed_files_integrity` check. The Dockerfile drops files that weren't extracted from Splunk's manifest instead, so anything added to `splunk_exclude` is handled automatically.
+- Splunk 10's supervisor starts every sidecar in `etc/packages/manifest.yaml` unless the manifest gates it on a `server.conf` flag. Settings like `enable_splunk_spotlight` or `[metadata_catalog] disabled` don't stop the process. To drop a sidecar from slim, exclude its `opt/packages/<name>-*` tarball. The Dockerfile then removes it from the supervisor manifest and updates that file's checksum. Check the tarball name in every minor line, since some were renamed (e.g. `agentmanager-*` became `agent-manager-*` in 10.6).
+- Only exclude something from slim if the feature disappears cleanly. The agent manager sidecar stays because without it Settings > Forwarder Management still shows up but errors.
 - Pin GitHub Actions to a full commit SHA, with the version in a trailing comment (`uses: foo/bar@<sha> # vX.Y.Z`). Dependabot keeps them updated.
 - Pin devcontainer feature versions, e.g. `common-utils:2.5.7`.
 - Use Conventional Commits: `feat:`, `fix(ci):`, `ci:`, `chore:`. Dependabot uses `ci(deps):` and `docker(deps):`.

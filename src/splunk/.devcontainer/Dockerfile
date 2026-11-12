@@ -18,14 +18,30 @@ ADD ${PACKAGE_URL}.sha512 ${PACKAGE}.sha512
 
 COPY ["splunk_exclude", "/tmp/"]
 
-# Drop excluded files from Splunk's manifest so the integrity check doesn't report them as missing
+# Drop excluded sidecar packages from the supervisor's manifest so it doesn't try to start them,
+# and excluded files from Splunk's manifest so the integrity check doesn't report them as missing
 RUN echo "$(cat ${PACKAGE}.sha512)" | sha512sum --check --status \
     && mkdir -p /package/splunk \
     && if [ "${SPLUNK_SLIM}" = "true" ]; then exclude="--exclude-from=splunk_exclude"; fi \
     && tar -C /package/splunk --strip 1 ${exclude} -zxf ${PACKAGE} \
+    && packages=/package/splunk/etc/packages/manifest.yaml \
+    && if [ -f "${packages}" ]; then \
+    drop=$(awk '/^[^ ]/ { if (file != "") print name, file; name = file = "" } \
+    /^[- ] (feature|name): / && name == "" { name = $NF } /^[- ] file: / { file = $NF } \
+    END { if (file != "") print name, file }' "${packages}" \
+    | while read -r name file; do [ -f "/package/splunk/opt/packages/${file}" ] || echo "${name}"; done) \
+    && awk -v drop="${drop}" 'BEGIN { split(drop, d); for (i in d) skip[d[i]] } \
+    function flush() { if (!(name in skip)) printf "%s", block; block = name = "" } \
+    /^[^ ]/ { flush() } /^[- ] (feature|name): / && name == "" { name = $NF } \
+    { block = block $0 "\n" } END { flush() }' "${packages}" > packages.yaml \
+    && cat packages.yaml > "${packages}" \
+    && sum=$(sha256sum "${packages}" | cut -d ' ' -f 1); \
+    fi \
     && find /package/splunk -printf 'splunk/%P\n' > installed \
     && manifest=$(echo /package/splunk/splunk-*-manifest) \
-    && awk 'NR == FNR { installed[$0]; next } /^#/ || $5 in installed' installed "${manifest}" > manifest \
+    && awk -v sum="${sum}" 'NR == FNR { installed[$0]; next } \
+    $5 == "splunk/etc/packages/manifest.yaml" && sum != "" { $6 = sum } \
+    /^#/ || $5 in installed' installed "${manifest}" > manifest \
     && mv manifest "${manifest}" \
     && touch /package/splunk/etc/.ui_login \
     && mkdir -p /package/splunk/etc/apps/user-prefs/local \
