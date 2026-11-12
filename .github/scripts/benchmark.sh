@@ -156,7 +156,8 @@ idle() {
     printf '%s\t' "$label" \
       "$(awk -v c0="${c0[i]}" -v c1="$(cpu_seconds)" -v t0="${t0[i]}" -v t1="$(now)" 'BEGIN { printf "%.1f", (c1 - c0) / (t1 - t0) * 100 }')" \
       "$((total[i] / n))" "$((working_set[i] / n))" "$((anon[i] / n))" "$(($(cg memory.peak) / 1048576))"
-    docker exec "$name" sh -c 'ls /proc | grep -c "^[0-9]"'
+    # Counted from the host, so the probe doesn't add processes inside the container
+    docker top "$name" -eo pid | tail -n +2 | wc -l
   done
 }
 
