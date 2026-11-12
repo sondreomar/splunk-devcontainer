@@ -139,7 +139,7 @@ idle() {
     use "$i"
     c0[i]=$(cpu_seconds) t0[i]=$(now) total[i]=0 working_set[i]=0 anon[i]=0
   done
-  while [ "$(printf '%.0f' "$(since "${t0[0]}")")" -lt "$SAMPLE" ]; do
+  while :; do
     for i in "${!specs[@]}"; do
       use "$i"
       current=$(($(cg memory.current) / 1048576))
@@ -148,6 +148,7 @@ idle() {
       anon[i]=$((anon[i] + $(stat_mb anon)))
     done
     n=$((n + 1))
+    [ "$(printf '%.0f' "$(since "${t0[0]}")")" -lt "$SAMPLE" ] || break
     sleep 5
   done
   for i in "${!specs[@]}"; do

@@ -125,6 +125,8 @@ jobs:
           SAMPLE: ${{ inputs.sample }}
           MODE: ${{ matrix.phase }}
           OUT: results
+        # Explicitly bash, so pipefail is on and a failing benchmark isn't hidden by tee
+        shell: bash
         run: |
           {
             echo "## Splunk $VERSION: $MODE"
