@@ -55,25 +55,38 @@ jobs:
           fi
           jq -r 'to_entries[] | "\(.key)=\(.value)"' <<< "$entry" >> "$GITHUB_OUTPUT"
 
-  build:
+  benchmark:
+    # Each phase compares all images on one runner, and the phases don't depend on each other
+    name: ${{ matrix.phase }}
     needs: setup
-    if: needs.setup.outputs.local == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        phase: [size, startup, idle]
     steps:
+      - name: Disk space
+        run: df -h .
+
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Buildx
+        if: needs.setup.outputs.local == 'true'
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
       - name: Node.js
+        if: needs.setup.outputs.local == 'true'
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "20.19.4"
 
+      # Building in each job is faster than sharing the images as an artifact
       - name: Build
+        if: needs.setup.outputs.local == 'true'
         env:
           SPLUNK_VERSION: ${{ needs.setup.outputs.version }}
           SPLUNK_BUILD: ${{ needs.setup.outputs.build }}
@@ -103,51 +116,6 @@ jobs:
             fi
           done
           exit $failed
-
-      - name: Save
-        env:
-          IMAGE: local/splunk-devcontainer:${{ needs.setup.outputs.version }}
-        run: docker save "$IMAGE" "$IMAGE-slim" "$IMAGE-uf" | zstd -T0 -3 -o images.tar.zst
-
-      - name: Upload
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: images
-          path: images.tar.zst
-          retention-days: 1
-          compression-level: 0
-
-  benchmark:
-    # Each phase compares all images on one runner, and the phases don't depend on each other
-    name: ${{ matrix.phase }}
-    needs: [setup, build]
-    if: ${{ !cancelled() && needs.setup.result == 'success' && needs.build.result != 'failure' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 360
-    strategy:
-      fail-fast: false
-      matrix:
-        phase: [size, startup, idle]
-    steps:
-      - name: Disk space
-        run: df -h .
-
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: Download images
-        if: needs.setup.outputs.local == 'true'
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: images
-
-      - name: Load images
-        if: needs.setup.outputs.local == 'true'
-        run: |
-          zstd -dc images.tar.zst | docker load
-          rm images.tar.zst
 
       - name: Benchmark
         env:
