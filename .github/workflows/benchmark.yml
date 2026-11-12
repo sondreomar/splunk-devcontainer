@@ -1,8 +1,6 @@
 name: Benchmark
 
 on:
-  push:
-    branches: [feat/benchmark]
   workflow_dispatch:
     inputs:
       version:
@@ -36,7 +34,7 @@ jobs:
       version: ${{ steps.version.outputs.version }}
       build: ${{ steps.version.outputs.build }}
       platform: ${{ steps.version.outputs.platform }}
-      local: ${{ inputs.build || github.event_name == 'push' }}
+      local: ${{ inputs.build }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -122,9 +120,9 @@ jobs:
           VERSION: ${{ needs.setup.outputs.version }}
           OURS: ${{ needs.setup.outputs.local == 'true' && 'local/splunk-devcontainer' || format('ghcr.io/{0}', github.repository) }}
           SOURCE: ${{ needs.setup.outputs.local == 'true' && format('built from {0} ({1})', github.ref_name, github.sha) || 'published' }}
-          RUNS: ${{ inputs.runs || 1 }}
-          SETTLE: ${{ inputs.settle || 30 }}
-          SAMPLE: ${{ inputs.sample || 60 }}
+          RUNS: ${{ inputs.runs }}
+          SETTLE: ${{ inputs.settle }}
+          SAMPLE: ${{ inputs.sample }}
           MODE: ${{ matrix.phase }}
           OUT: results
         run: |
