@@ -1,9 +1,10 @@
 #!/bin/bash
-# Compare startup time, CPU and memory of Splunk images.
+# Compare image size, startup time, CPU and memory of Splunk images.
 # Usage: benchmark.sh <label>=<image> [<label>=<image> ...]
+# MODE=size reports download size (from the registry, or a gzip estimate for local builds) and unpacked size.
 # MODE=startup starts each image on its own RUNS times (first start, then a restart), in random order.
 # MODE=idle starts every image at once, lets them settle and samples their idle CPU and memory.
-# MODE=all (default) does both. Raw results go to $OUT-startup.tsv and $OUT-idle.tsv,
+# MODE takes a comma-separated list, or all (default). Raw results go to $OUT-<mode>.tsv,
 # and a Markdown summary (median, min–max) to stdout.
 set -euo pipefail
 
@@ -17,12 +18,16 @@ TIMEOUT=${TIMEOUT:-900}
 OUT=${OUT:-benchmark}
 PASSWORD=splunkdev
 
+size_columns=(label download unpacked)
+size_headers=("Download (MB)" "Unpacked (MB)")
 startup_columns=(label run first_up first_ready first_cpu restart_ready restart_cpu)
 startup_headers=("First start: up (s)" "First start: ready (s)" "First start CPU (s)" "Restart: ready (s)" "Restart CPU (s)")
-idle_columns=(label idle_cpu mem anon peak procs)
-idle_headers=("Idle CPU (%)" "Memory (MB)" "Anonymous memory (MB)" "Peak memory (MB)" "Processes")
+idle_columns=(label idle_cpu total working_set anon peak procs)
+idle_headers=("Idle CPU (%)" "Memory incl. cache (MB)" "Working set (MB)" "Anonymous memory (MB)" "Peak memory (MB)" "Processes")
 
 log() { echo "[$(date +%T)] $*" >&2; }
+die() { echo "$*" >&2; exit 1; }
+has_mode() { [ "$MODE" = all ] || [[ ",$MODE," == *",$1,"* ]]; }
 now() { date +%s.%N; }
 since() { awk -v s="$1" -v n="$(now)" 'BEGIN { printf "%.1f", n - s }'; }
 cg() { docker exec "$name" cat "/sys/fs/cgroup/$1"; }
@@ -122,7 +127,7 @@ startup() {
 
 # Starts every image at once and samples each container's own cgroup
 idle() {
-  local i n=0 c0=() t0=() mem=() anon=()
+  local i n=0 c0=() t0=() total=() working_set=() anon=() current
   log "idle: starting every image"
   for i in "${!specs[@]}"; do use "$i"; start_container; done
   for i in "${!specs[@]}"; do use "$i"; wait_ready "$(now)"; done
@@ -131,12 +136,14 @@ idle() {
   sleep "$SETTLE"
   for i in "${!specs[@]}"; do
     use "$i"
-    c0[i]=$(cpu_seconds) t0[i]=$(now) mem[i]=0 anon[i]=0
+    c0[i]=$(cpu_seconds) t0[i]=$(now) total[i]=0 working_set[i]=0 anon[i]=0
   done
   while [ "$(printf '%.0f' "$(since "${t0[0]}")")" -lt "$SAMPLE" ]; do
     for i in "${!specs[@]}"; do
       use "$i"
-      mem[i]=$((mem[i] + $(cg memory.current) / 1048576 - $(stat_mb inactive_file)))
+      current=$(($(cg memory.current) / 1048576))
+      total[i]=$((total[i] + current))
+      working_set[i]=$((working_set[i] + current - $(stat_mb inactive_file)))
       anon[i]=$((anon[i] + $(stat_mb anon)))
     done
     n=$((n + 1))
@@ -146,9 +153,33 @@ idle() {
     use "$i"
     printf '%s\t' "$label" \
       "$(awk -v c0="${c0[i]}" -v c1="$(cpu_seconds)" -v t0="${t0[i]}" -v t1="$(now)" 'BEGIN { printf "%.1f", (c1 - c0) / (t1 - t0) * 100 }')" \
-      "$((mem[i] / n))" "$((anon[i] / n))" "$(($(cg memory.peak) / 1048576))"
+      "$((total[i] / n))" "$((working_set[i] / n))" "$((anon[i] / n))" "$(($(cg memory.peak) / 1048576))"
     docker exec "$name" sh -c 'ls /proc | grep -c "^[0-9]"'
   done
+}
+
+# Download size is exact for pulled images (registry manifest, amd64) and a gzip estimate (~) for local builds
+size() {
+  local image=${specs[$1]#*=} dir layer download= compressed=0 unpacked=0 digest
+  digest=$(docker image inspect -f '{{range .RepoDigests}}{{println .}}{{end}}' "$image" | head -1)
+  if [ -n "$digest" ]; then
+    download=$(docker manifest inspect -v "$digest" 2>/dev/null | jq 'if type == "array"
+      then map(select(.Descriptor.platform.architecture == "amd64"))[0] else . end
+      | [(.OCIManifest // .SchemaV2Manifest).layers[].size] | add / 1000000 | floor' || true)
+  fi
+  dir=$(mktemp -d)
+  docker save "$image" | tar -x -C "$dir"
+  for layer in $(jq -r '.[0].Layers[]' "$dir/manifest.json"); do
+    if [ "$(head -c 2 "$dir/$layer" | od -An -tx1 | tr -d ' \n')" = 1f8b ]; then
+      compressed=$((compressed + $(stat -c %s "$dir/$layer")))
+      unpacked=$((unpacked + $(gzip -dc "$dir/$layer" | wc -c)))
+    else
+      compressed=$((compressed + $(gzip -c "$dir/$layer" | wc -c)))
+      unpacked=$((unpacked + $(stat -c %s "$dir/$layer")))
+    fi
+  done
+  rm -rf "$dir"
+  printf '%s\t%s\t%s\n' "${specs[$1]%%=*}" "${download:-~$((compressed / 1000000))}" "$((unpacked / 1000000))"
 }
 
 # Markdown table of the median (min–max) per image: <file> <headers array name>
@@ -177,7 +208,15 @@ summary() {
   done
 }
 
-[ $# -gt 0 ] || { sed -n 2,7p "$0" | cut -c 3-; exit 1; }
+[ $# -gt 0 ] || { sed -n 2,8p "$0" | cut -c 3-; exit 1; }
+[[ "$MODE" =~ ^(all|(size|startup|idle)(,(size|startup|idle))*)$ ]] || die "MODE must be all or a comma-separated list of size, startup and idle"
+for setting in RUNS SAMPLE TIMEOUT; do
+  [[ "${!setting}" =~ ^[1-9][0-9]*$ ]] || die "$setting must be a positive whole number of seconds or runs"
+done
+[[ "$SETTLE" =~ ^[0-9]+$ ]] || die "SETTLE must be a whole number of seconds"
+for spec in "$@"; do
+  [[ "$spec" == ?*=?* ]] || die "Expected <label>=<image>, got $spec"
+done
 trap 'docker ps -aq --filter name=splunk-benchmark- | xargs -r docker rm -fv >/dev/null' EXIT
 
 specs=("$@") homes=() artifact_dirs=()
@@ -189,7 +228,18 @@ for i in "${!specs[@]}"; do
   artifact_dirs[i]=$(image_env "$image" CONTAINER_ARTIFACT_DIR)
 done
 
-if [ "$MODE" = startup ] || [ "$MODE" = all ]; then
+if has_mode size; then
+  (IFS=$'\t'; echo "${size_columns[*]}") > "$OUT-size.tsv"
+  for i in "${!specs[@]}"; do
+    log "${specs[i]%%=*}: size"
+    size "$i" | tee -a "$OUT-size.tsv" >&2
+  done
+  printf '### Size\n\nDownload size is the compressed amd64 layers; ~ marks a gzip estimate for images not pulled from a registry.\n\n'
+  summary "$OUT-size.tsv" size_headers
+  echo
+fi
+
+if has_mode startup; then
   (IFS=$'\t'; echo "${startup_columns[*]}") > "$OUT-startup.tsv"
   for run in $(seq "$RUNS"); do
     for i in $(shuf -e "${!specs[@]}"); do
@@ -201,7 +251,7 @@ if [ "$MODE" = startup ] || [ "$MODE" = all ]; then
   echo
 fi
 
-if [ "$MODE" = idle ] || [ "$MODE" = all ]; then
+if has_mode idle; then
   (IFS=$'\t'; echo "${idle_columns[*]}") > "$OUT-idle.tsv"
   idle | tee -a "$OUT-idle.tsv" >&2
   printf '### Idle\n\nAll images running at once, sampled for %ss after %ss to settle.\n\n' "$SAMPLE" "$SETTLE"

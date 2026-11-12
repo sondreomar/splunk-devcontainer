@@ -8,13 +8,9 @@ on:
         type: string
         default: ""
       build:
-        description: "Build our images instead of pulling the published ones"
+        description: "Build our images from the selected branch instead of pulling the published ones"
         type: boolean
         default: false
-      ref:
-        description: "Branch, tag or SHA to build our images from (defaults to the workflow's ref)"
-        type: string
-        default: ""
       runs:
         description: "Number of times to start and restart each image"
         type: number
@@ -48,6 +44,8 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Version
         id: version
@@ -60,13 +58,6 @@ jobs:
             exit 1
           fi
           jq -r 'to_entries[] | "\(.key)=\(.value)"' <<< "$entry" >> "$GITHUB_OUTPUT"
-
-      - name: Checkout images to build
-        if: inputs.build && inputs.ref != ''
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ inputs.ref }}
-          path: build-src
 
       - name: Buildx
         if: inputs.build
@@ -84,13 +75,12 @@ jobs:
           SPLUNK_VERSION: ${{ steps.version.outputs.version }}
           SPLUNK_BUILD: ${{ steps.version.outputs.build }}
           SPLUNK_PLATFORM: ${{ steps.version.outputs.platform }}
-          SRC: ${{ inputs.ref != '' && 'build-src' || '.' }}
         run: |
           npm install -g @devcontainers/cli@0.80.0
           for variant in splunk:splunk: splunk:splunk-slim:true universalforwarder:splunk-uf:; do
             IFS=: read -r workspace name slim <<< "$variant"
             suffix=${name#splunk}
-            SPLUNK_SLIM=$slim devcontainer build --workspace-folder "$SRC/src/$workspace" \
+            SPLUNK_SLIM=$slim devcontainer build --workspace-folder "src/$workspace" \
               --image-name "local/splunk-devcontainer:$SPLUNK_VERSION$suffix"
             docker builder prune -af > /dev/null
           done
@@ -99,6 +89,7 @@ jobs:
         env:
           VERSION: ${{ steps.version.outputs.version }}
           OURS: ${{ inputs.build && 'local/splunk-devcontainer' || format('ghcr.io/{0}', github.repository) }}
+          SOURCE: ${{ inputs.build && format('built from {0} ({1})', github.ref_name, github.sha) || 'published' }}
           RUNS: ${{ inputs.runs }}
           SETTLE: ${{ inputs.settle }}
           SAMPLE: ${{ inputs.sample }}
@@ -107,7 +98,7 @@ jobs:
           {
             echo "## Splunk $VERSION"
             echo
-            echo "Our images: \`$OURS\`. Median (min–max)."
+            echo "Our images: $SOURCE. Median (min–max)."
             echo
           } >> "$GITHUB_STEP_SUMMARY"
           .github/scripts/benchmark.sh \
@@ -122,9 +113,10 @@ jobs:
             echo "<details><summary>Raw results</summary>"
             echo
             echo '```tsv'
-            cat results-startup.tsv
-            echo
-            cat results-idle.tsv
+            for file in results-size.tsv results-startup.tsv results-idle.tsv; do
+              cat "$file"
+              echo
+            done
             echo '```'
             echo "</details>"
           } >> "$GITHUB_STEP_SUMMARY"
