@@ -12,6 +12,7 @@ Devcontainer images for local Splunk development, published to `ghcr.io/sondreom
   - Releases build the versions added since the previous release tag. If `src/` or `build-image.yml` changed since then, they also rebuild the newest version in each minor line.
   - PRs build the newest version in each minor line, plus any versions the PR adds.
   - Dispatch `release.yml` (on a tag) or `test.yml` with `all_versions` to build every version. `release.yml` also takes a `variant` input to rebuild only one variant, e.g. every slim image after a slim-only change.
+  - `benchmark.yml` (dispatch only) runs `.github/scripts/benchmark.sh` to compare image size, startup time, CPU and memory of our images against Splunk's official ones, either pulled from ghcr.io or built with `build` from the branch it's dispatched on. To benchmark a PR, merge `main` into its branch and dispatch on that branch. Size, startup and idle run as parallel jobs, each comparing every image on one runner; with `build`, each job builds the images itself, in parallel (downloading them as a shared artifact was slower). Startup is measured one container at a time, idle CPU and memory with every image running at once. The script also runs locally: `benchmark.sh <label>=<image> ...`.
 - `examples/` – example devcontainer setups. The images aren't built from these.
 - `.devcontainer/` – devcontainer for working on this repo. It builds `src/splunk` with a pinned version.
 
