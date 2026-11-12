@@ -21,6 +21,8 @@ Devcontainer images for local Splunk development, published to `ghcr.io/sondreom
   - Only the Enterprise image has a slim variant and seeds UI config.
   - Only the forwarder image installs `systemd`, because the forwarder won't start without it.
 - Don't disable Splunk's `installed_files_integrity` check. The Dockerfile drops files that weren't extracted from Splunk's manifest instead, so anything added to `splunk_exclude` is handled automatically.
+- Splunk 10's supervisor starts every sidecar in `etc/packages/manifest.yaml` unless the manifest gates it on a `server.conf` flag. Settings like `enable_splunk_spotlight` or `[metadata_catalog] disabled` don't stop the process. To drop a sidecar from slim, exclude its `opt/packages/<name>-*` tarball. The Dockerfile then removes it from the supervisor manifest and updates that file's checksum. Check the tarball name in every minor line, since some were renamed (e.g. `agentmanager-*` became `agent-manager-*` in 10.6).
+- Only exclude something from slim if the feature disappears cleanly. The agent manager sidecar stays because without it Settings > Forwarder Management still shows up but errors.
 - Pin GitHub Actions to a full commit SHA, with the version in a trailing comment (`uses: foo/bar@<sha> # vX.Y.Z`). Dependabot keeps them updated.
 - Pin devcontainer feature versions, e.g. `common-utils:2.5.7`.
 - Use Conventional Commits: `feat:`, `fix(ci):`, `ci:`, `chore:`. Dependabot uses `ci(deps):` and `docker(deps):`.
