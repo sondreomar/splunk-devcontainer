@@ -178,6 +178,7 @@ jobs:
         env:
           IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.version }}${{ needs.setup.outputs.suffix }}
           WORKSPACE: ${{ needs.setup.outputs.workspace }}
+          SLIM: ${{ needs.setup.outputs.slim }}
         run: |
           setup=
           if [[ "$WORKSPACE" == universalforwarder ]]; then
@@ -191,6 +192,17 @@ jobs:
           web() { docker exec smoke curl -sf --connect-timeout 5 --max-time 30 -o /dev/null "http://localhost:8000$1"; }
           splunkd_up() { api /services/server/info > /dev/null; }
           kvstore_ready() { [[ "$(api '/services/kvstore/status?output_mode=json' | jq -r '.entry[0].content.current.status')" == ready ]]; }
+          supervisor_log() { docker exec smoke sh -c 'cat "$SPLUNK_HOME/var/log/splunk/supervisor.log" 2> /dev/null' || true; }
+          # Every packaged sidecar is started (its ID is <name>-<uuid>), unless a server.conf feature flag skips it
+          sidecars_started() {
+            local log name missing=
+            log=$(supervisor_log)
+            for name in $(awk '/^[^ -]/ { s = $1 } s == "packages:" && /^[- ] name: / { print $NF }' <<< "$manifest"); do
+              grep -qE "\"message\":\"(Starting a sidecar\".*\"sidecarI[Dd]\":\"$name-[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}\"|Skipping package[^\"]*\".*\"name\":\"$name\")" <<< "$log" \
+                || missing+=" $name"
+            done
+            [[ -z "$missing" ]] || { echo "Sidecars not started yet:$missing"; return 1; }
+          }
 
           wait_for() {
             local error=$1 deadline=$((SECONDS + $2)) timeout=$2
@@ -219,11 +231,28 @@ jobs:
             exit 1
           fi
 
+          # Every sidecar left in the supervisor manifest (pre-10.6 and 10.6 layouts) must have its package
+          manifest=$(docker exec smoke sh -c 'cat "$SPLUNK_HOME/etc/packages/manifest.yaml" 2> /dev/null' || true)
+          packages=$(docker exec smoke sh -c 'ls "$SPLUNK_HOME/opt/packages" 2> /dev/null' || true)
+          missing=$(comm -23 <(sed -n 's/^[- ] file: //p' <<< "$manifest" | sort) <(sort <<< "$packages"))
+          orphans=$(awk '/^[^ -]/ { s = $1 } s == "features:" && /^[- ] name: / { f[$NF] }
+            s == "packages:" && /^[- ] feature: / { p[$NF] } END { for (n in f) if (!(n in p)) print n }' <<< "$manifest")
+          if [[ -n "$missing$orphans" ]]; then
+            echo "::error::The supervisor manifest references sidecars that aren't installed: $missing $orphans"
+            exit 1
+          fi
+
           if [[ "$WORKSPACE" == splunk ]]; then
             wait_for "KV store wasn't ready" 180 kvstore_ready
             wait_for "Splunk Web didn't respond on port 8000" 120 web /en-US/account/login
             if ! web /en-US/static/js/i18n.js; then
               echo "::error::Splunk Web didn't serve its static files"
+              exit 1
+            fi
+            wait_for "The supervisor didn't start every sidecar" 120 sidecars_started
+            # The full image's Edge Processor sidecar keeps failing to start, so only slim can be held to this
+            if [[ "$SLIM" == true ]] && grep '"message":"Start failed, retry"' <<< "$(supervisor_log)"; then
+              echo "::error::A sidecar failed to start"
               exit 1
             fi
           fi
@@ -234,6 +263,36 @@ jobs:
             echo "::error::Splunk reported a file integrity problem"
             exit 1
           fi
+
+          # Record what the sidecar manifest holds and what actually started, for reviewers
+          if [[ -z "$manifest" ]]; then
+            layout="none"
+          elif grep -q '^features:' <<< "$manifest"; then
+            layout="10.6 (features and packages)"
+          else
+            layout="pre-10.6 (packages only)"
+          fi
+          log=$(supervisor_log)
+          listed=$(awk '/^[^ -]/ { s = $1 } s == "packages:" && /^[- ] name: / { print $NF }' <<< "$manifest" | sort | paste -sd ' ')
+          started=$(grep '"message":"Starting a sidecar"' <<< "$log" | grep -oE '"sidecarI[Dd]":"[^"]*"' \
+            | sed -E 's/.*":"//; s/-[0-9a-f-]{36}"$//' | sort -u | paste -sd ' ' || true)
+          skipped=$(grep '"message":"Skipping package' <<< "$log" | grep -oE '"name":"[^"]*"' | cut -d '"' -f 4 | sort -u | paste -sd ' ' || true)
+          failures=$(grep -c '"message":"Start failed, retry"' <<< "$log" || true)
+          {
+            echo "### Smoke test: \`$IMAGE\`"
+            echo
+            echo "| Check | Result |"
+            echo "|---|---|"
+            echo "| Sidecar manifest | $layout |"
+            echo "| Sidecars in manifest | ${listed:-none} |"
+            echo "| Started | ${started:-none} |"
+            echo "| Skipped by a feature flag | ${skipped:-none} |"
+            echo "| Repeated start failures | $failures |"
+            echo "| \`splunk validate files\` | All installed files intact |"
+            if [[ "$WORKSPACE" == splunk ]]; then
+              echo "| KV store | ready |"
+            fi
+          } | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Push
         if: inputs.push

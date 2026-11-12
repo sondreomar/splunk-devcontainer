@@ -29,7 +29,7 @@ The image can also be extended with additional devcontainer features, for exampl
 | [splunk](./src/splunk/)                         | Splunk Enterprise without rarely used apps | -slim          | `ghcr.io/sondreomar/splunk-devcontainer:latest-slim` |
 | [universalforwarder](./src/universalforwarder/) | Splunk Universal Forwarder                 | -uf            | `ghcr.io/sondreomar/splunk-devcontainer:latest-uf`   |
 
-The slim image leaves out the apps listed in [splunk_exclude](./src/splunk/.devcontainer/splunk_exclude) to reduce the image size, and removes them from Splunk's manifest so the file integrity check doesn't report them as missing.
+The slim image leaves out the apps and supervisor sidecar packages listed in [splunk_exclude](./src/splunk/.devcontainer/splunk_exclude) to reduce the image size and the memory and CPU used at runtime. It removes them from Splunk's manifest so the file integrity check doesn't report them as missing. The excluded sidecars are Spotlight, OpAMP, Edge Processor, Metadata Catalog and Topology. The KV store (PostgreSQL), SPL2 preview (SPL2 in search, from 10.4) and Agent Management sidecars are kept. Edge Processor is left out entirely, including the Data Management app that links to it.
 
 ## Image Tags
 
