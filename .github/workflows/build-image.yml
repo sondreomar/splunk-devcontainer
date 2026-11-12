@@ -193,12 +193,13 @@ jobs:
           splunkd_up() { api /services/server/info > /dev/null; }
           kvstore_ready() { [[ "$(api '/services/kvstore/status?output_mode=json' | jq -r '.entry[0].content.current.status')" == ready ]]; }
           supervisor_log() { docker exec smoke sh -c 'cat "$SPLUNK_HOME/var/log/splunk/supervisor.log" 2> /dev/null' || true; }
-          # Every packaged sidecar is started (its ID is <name>-<uuid>), unless a server.conf feature flag skips it
+          # Every packaged sidecar is started, unless a server.conf feature flag skips it. The supervisor logs JSON with
+          # sidecar IDs of <name>-<uuid>, except in older 9.3 and 9.4 patches, which log 'starting sidecar "<name>"'
           sidecars_started() {
             local log name missing=
             log=$(supervisor_log)
             for name in $(awk '/^[^ -]/ { s = $1 } s == "packages:" && /^[- ] name: / { print $NF }' <<< "$manifest"); do
-              grep -qE "\"message\":\"(Starting a sidecar\".*\"sidecarI[Dd]\":\"$name-[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}\"|Skipping package[^\"]*\".*\"name\":\"$name\")" <<< "$log" \
+              grep -qE "\"message\":\"(Starting a sidecar\".*\"sidecarI[Dd]\":\"$name-[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}\"|Skipping package[^\"]*\".*\"name\":\"$name\")|starting sidecar \"$name\"" <<< "$log" \
                 || missing+=" $name"
             done
             [[ -z "$missing" ]] || { echo "Sidecars not started yet:$missing"; return 1; }
@@ -274,8 +275,10 @@ jobs:
           fi
           log=$(supervisor_log)
           listed=$(awk '/^[^ -]/ { s = $1 } s == "packages:" && /^[- ] name: / { print $NF }' <<< "$manifest" | sort | paste -sd ' ')
-          started=$(grep '"message":"Starting a sidecar"' <<< "$log" | grep -oE '"sidecarI[Dd]":"[^"]*"' \
-            | sed -E 's/.*":"//; s/-[0-9a-f-]{36}"$//' | sort -u | paste -sd ' ' || true)
+          started=$({
+            grep '"message":"Starting a sidecar"' <<< "$log" | grep -oE '"sidecarI[Dd]":"[^"]*"' | sed -E 's/.*":"//; s/-[0-9a-f-]{36}"$//'
+            grep -oE 'starting sidecar "[^"]*"' <<< "$log" | cut -d '"' -f 2
+          } | sort -u | paste -sd ' ' || true)
           skipped=$(grep '"message":"Skipping package' <<< "$log" | grep -oE '"name":"[^"]*"' | cut -d '"' -f 4 | sort -u | paste -sd ' ' || true)
           failures=$(grep -c '"message":"Start failed, retry"' <<< "$log" || true)
           {
