@@ -219,6 +219,17 @@ jobs:
             exit 1
           fi
 
+          # Every sidecar left in the supervisor manifest (pre-10.6 and 10.6 layouts) must have its package
+          manifest=$(docker exec smoke sh -c 'cat "$SPLUNK_HOME/etc/packages/manifest.yaml" 2> /dev/null' || true)
+          packages=$(docker exec smoke sh -c 'ls "$SPLUNK_HOME/opt/packages" 2> /dev/null' || true)
+          missing=$(comm -23 <(sed -n 's/^[- ] file: //p' <<< "$manifest" | sort) <(sort <<< "$packages"))
+          orphans=$(awk '/^[^ -]/ { s = $1 } s == "features:" && /^[- ] name: / { f[$NF] }
+            s == "packages:" && /^[- ] feature: / { p[$NF] } END { for (n in f) if (!(n in p)) print n }' <<< "$manifest")
+          if [[ -n "$missing$orphans" ]]; then
+            echo "::error::The supervisor manifest references sidecars that aren't installed: $missing $orphans"
+            exit 1
+          fi
+
           if [[ "$WORKSPACE" == splunk ]]; then
             wait_for "KV store wasn't ready" 180 kvstore_ready
             wait_for "Splunk Web didn't respond on port 8000" 120 web /en-US/account/login
