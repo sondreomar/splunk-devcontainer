@@ -30,7 +30,16 @@ die() { echo "$*" >&2; exit 1; }
 has_mode() { [ "$MODE" = all ] || [[ ",$MODE," == *",$1,"* ]]; }
 now() { date +%s.%N; }
 since() { awk -v s="$1" -v n="$(now)" 'BEGIN { printf "%.1f", n - s }'; }
-cg() { docker exec "$name" cat "/sys/fs/cgroup/$1"; }
+# Read from the host so the probe isn't charged to the measured container; docker exec where the host can't see it
+cg() {
+  local path
+  path=$(sed -n 's/^0:://p' "/proc/$(docker inspect -f '{{.State.Pid}}' "$name")/cgroup" 2>/dev/null || true)
+  if [ "${path:-/}" != / ] && [ -r "/sys/fs/cgroup$path/$1" ]; then
+    cat "/sys/fs/cgroup$path/$1"
+  else
+    docker exec "$name" cat "/sys/fs/cgroup/$1"
+  fi
+}
 cpu_seconds() { cg cpu.stat | awk '/^usage_usec/ { printf "%.1f", $2 / 1e6 }'; }
 stat_mb() { cg memory.stat | awk -v k="$1" '$1 == k { printf "%.0f", $2 / 1048576 }'; }
 image_env() { docker image inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$1" | sed -n "s/^$2=//p"; }
@@ -68,7 +77,8 @@ wait_ready() {
   while :; do
     [ -z "$up" ] && is_up && up=1 && t_up=$(since "$start")
     [ -z "$web" ] && web_up && web=1
-    if [ -n "$up" ] && [ -n "$web" ] && provisioned && is_up; then
+    # Check every condition again at once, as the official images can restart Splunk while Ansible runs
+    if [ -n "$up" ] && [ -n "$web" ] && provisioned && is_up && { [ "$kind" != enterprise ] || web_up; }; then
       t_ready=$(since "$start")
       return
     fi
