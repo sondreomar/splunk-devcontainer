@@ -264,6 +264,36 @@ jobs:
             exit 1
           fi
 
+          # Record what the sidecar manifest holds and what actually started, for reviewers
+          if [[ -z "$manifest" ]]; then
+            layout="none"
+          elif grep -q '^features:' <<< "$manifest"; then
+            layout="10.6 (features and packages)"
+          else
+            layout="pre-10.6 (packages only)"
+          fi
+          log=$(supervisor_log)
+          listed=$(awk '/^[^ -]/ { s = $1 } s == "packages:" && /^[- ] name: / { print $NF }' <<< "$manifest" | sort | paste -sd ' ')
+          started=$(grep '"message":"Starting a sidecar"' <<< "$log" | grep -oE '"sidecarI[Dd]":"[^"]*"' \
+            | sed -E 's/.*":"//; s/-[0-9a-f-]{36}"$//' | sort -u | paste -sd ' ' || true)
+          skipped=$(grep '"message":"Skipping package' <<< "$log" | grep -oE '"name":"[^"]*"' | cut -d '"' -f 4 | sort -u | paste -sd ' ' || true)
+          failures=$(grep -c '"message":"Start failed, retry"' <<< "$log" || true)
+          {
+            echo "### Smoke test: \`$IMAGE\`"
+            echo
+            echo "| Check | Result |"
+            echo "|---|---|"
+            echo "| Sidecar manifest | $layout |"
+            echo "| Sidecars in manifest | ${listed:-none} |"
+            echo "| Started | ${started:-none} |"
+            echo "| Skipped by a feature flag | ${skipped:-none} |"
+            echo "| Repeated start failures | $failures |"
+            echo "| \`splunk validate files\` | All installed files intact |"
+            if [[ "$WORKSPACE" == splunk ]]; then
+              echo "| KV store | ready |"
+            fi
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
       - name: Push
         if: inputs.push
         id: push
