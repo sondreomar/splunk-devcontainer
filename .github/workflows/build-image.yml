@@ -193,12 +193,12 @@ jobs:
           splunkd_up() { api /services/server/info > /dev/null; }
           kvstore_ready() { [[ "$(api '/services/kvstore/status?output_mode=json' | jq -r '.entry[0].content.current.status')" == ready ]]; }
           supervisor_log() { docker exec smoke sh -c 'cat "$SPLUNK_HOME/var/log/splunk/supervisor.log" 2> /dev/null' || true; }
-          # Every packaged sidecar is started, unless a server.conf feature flag skips it
+          # Every packaged sidecar is started (its ID is <name>-<uuid>), unless a server.conf feature flag skips it
           sidecars_started() {
             local log name missing=
             log=$(supervisor_log)
             for name in $(awk '/^[^ -]/ { s = $1 } s == "packages:" && /^[- ] name: / { print $NF }' <<< "$manifest"); do
-              grep -qE "\"message\":\"(Starting a sidecar\".*\"sidecarI[Dd]\":\"$name|Skipping package[^\"]*\".*\"name\":\"$name\")" <<< "$log" \
+              grep -qE "\"message\":\"(Starting a sidecar\".*\"sidecarI[Dd]\":\"$name-[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}\"|Skipping package[^\"]*\".*\"name\":\"$name\")" <<< "$log" \
                 || missing+=" $name"
             done
             [[ -z "$missing" ]] || { echo "Sidecars not started yet:$missing"; return 1; }
