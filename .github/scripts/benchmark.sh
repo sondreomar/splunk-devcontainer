@@ -161,7 +161,8 @@ idle() {
 
 # Download size is exact for pulled images (registry manifest, amd64) and a gzip estimate (~) for local builds
 size() {
-  local image=${specs[$1]#*=} dir layer download= compressed=0 unpacked=0 digest
+  local image=${specs[$1]#*=} dir layer download= compressed=0 unpacked=0 digest gz=gzip
+  if command -v pigz >/dev/null; then gz=pigz; fi
   digest=$(docker image inspect -f '{{range .RepoDigests}}{{println .}}{{end}}' "$image" | head -1)
   if [ -n "$digest" ]; then
     download=$(docker manifest inspect -v "$digest" 2>/dev/null | jq 'if type == "array"
@@ -173,9 +174,9 @@ size() {
   for layer in $(jq -r '.[0].Layers[]' "$dir/manifest.json"); do
     if [ "$(head -c 2 "$dir/$layer" | od -An -tx1 | tr -d ' \n')" = 1f8b ]; then
       compressed=$((compressed + $(stat -c %s "$dir/$layer")))
-      unpacked=$((unpacked + $(gzip -dc "$dir/$layer" | wc -c)))
+      unpacked=$((unpacked + $("$gz" -dc "$dir/$layer" | wc -c)))
     else
-      compressed=$((compressed + $(gzip -c "$dir/$layer" | wc -c)))
+      [ -n "$download" ] || compressed=$((compressed + $("$gz" -c "$dir/$layer" | wc -c)))
       unpacked=$((unpacked + $(stat -c %s "$dir/$layer")))
     fi
   done
@@ -222,10 +223,13 @@ RUN_ID=$$-$(date +%s)
 trap 'docker ps -aq --filter "label=splunk-benchmark=$RUN_ID" | xargs -r docker rm -fv >/dev/null' EXIT
 
 specs=("$@") homes=() artifact_dirs=()
-log "warming up: reading every image once"
 for i in "${!specs[@]}"; do
   image=${specs[i]#*=}
-  docker run --rm --entrypoint sh "$image" -c 'tar -cf - /opt 2>/dev/null | wc -c' >/dev/null
+  docker image inspect "$image" >/dev/null 2>&1 || docker pull -q "$image" >/dev/null
+  if has_mode startup || has_mode idle; then
+    log "${specs[i]%%=*}: warming up (reading the image once)"
+    docker run --rm --entrypoint sh "$image" -c 'tar -cf - /opt 2>/dev/null | wc -c' >/dev/null
+  fi
   homes[i]=$(image_env "$image" SPLUNK_HOME)
   artifact_dirs[i]=$(image_env "$image" CONTAINER_ARTIFACT_DIR)
 done
