@@ -34,11 +34,12 @@ cg() { docker exec "$name" cat "/sys/fs/cgroup/$1"; }
 cpu_seconds() { cg cpu.stat | awk '/^usage_usec/ { printf "%.1f", $2 / 1e6 }'; }
 stat_mb() { cg memory.stat | awk -v k="$1" '$1 == k { printf "%.0f", $2 / 1048576 }'; }
 image_env() { docker image inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$1" | sed -n "s/^$2=//p"; }
+host_port() { docker port "$name" "$1/tcp" | head -1 | sed 's/.*://'; }
 
 # Splunk answers: REST on 8089 for Enterprise, the CLI for the forwarder (10.x has no TCP management port by default)
 is_up() {
   if [ "$kind" = enterprise ]; then
-    [ "$(curl -sk -m 2 -u "admin:$PASSWORD" -o /dev/null -w '%{http_code}' "https://127.0.0.1:$api_port/services/server/info")" = 200 ]
+    [ "$(curl -sk -m 2 -u "admin:$PASSWORD" -o /dev/null -w '%{http_code}' "https://127.0.0.1:$(host_port 8089)/services/server/info")" = 200 ]
   else
     timeout 10 docker exec -u splunk "$name" "$home/bin/splunk" list forward-server -auth "admin:$PASSWORD" \
       --no-prompt </dev/null >/dev/null 2>&1
@@ -46,9 +47,10 @@ is_up() {
 }
 
 web_up() {
-  local scheme
+  local scheme port
+  port=$(host_port 8000)
   for scheme in http https; do
-    [ "$(curl -skL -m 2 -o /dev/null -w '%{http_code}' "$scheme://127.0.0.1:$web_port/en-US/account/login")" = 200 ] && return 0
+    [ "$(curl -skL -m 2 -o /dev/null -w '%{http_code}' "$scheme://127.0.0.1:$port/en-US/account/login")" = 200 ] && return 0
   done
   return 1
 }
@@ -79,22 +81,21 @@ wait_ready() {
   done
 }
 
-# Sets the container, ports and image details for image number $1
+# Sets the container and image details for image number $1
 use() {
   label=${specs[$1]%%=*} image=${specs[$1]#*=} home=${homes[$1]} artifacts=${artifact_dirs[$1]}
-  name=splunk-benchmark-$1 api_port=$((18100 + $1)) web_port=$((18200 + $1))
+  name=splunk-benchmark-$RUN_ID-$1
   kind=enterprise official=no
   if [ "$home" = /opt/splunkforwarder ]; then kind=uf; fi
   if [ -n "$artifacts" ]; then official=yes; fi
 }
 
 start_container() {
-  local args=(--name "$name" --cpus "$CPUS" --memory "$MEMORY" --memory-swap "$MEMORY"
+  local args=(--name "$name" --label "splunk-benchmark=$RUN_ID" --cpus "$CPUS" --memory "$MEMORY" --memory-swap "$MEMORY"
     -e SPLUNK_START_ARGS=--accept-license -e SPLUNK_PASSWORD=$PASSWORD
     -e SPLUNK_GENERAL_TERMS=--accept-sgt-current-at-splunk-com
-    -p "127.0.0.1:$api_port:8089")
-  if [ "$kind" = enterprise ]; then args+=(-p "127.0.0.1:$web_port:8000"); fi
-  docker rm -fv "$name" >/dev/null 2>&1 || true
+    -p 127.0.0.1::8089)
+  if [ "$kind" = enterprise ]; then args+=(-p 127.0.0.1::8000); fi
   docker run -d "${args[@]}" "$image" >/dev/null
 }
 
@@ -217,7 +218,8 @@ done
 for spec in "$@"; do
   [[ "$spec" == ?*=?* ]] || die "Expected <label>=<image>, got $spec"
 done
-trap 'docker ps -aq --filter name=splunk-benchmark- | xargs -r docker rm -fv >/dev/null' EXIT
+RUN_ID=$$-$(date +%s)
+trap 'docker ps -aq --filter "label=splunk-benchmark=$RUN_ID" | xargs -r docker rm -fv >/dev/null' EXIT
 
 specs=("$@") homes=() artifact_dirs=()
 log "warming up: reading every image once"
