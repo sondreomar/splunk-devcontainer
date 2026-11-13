@@ -1,0 +1,31 @@
+name: Test push (temporary)
+
+on:
+  push:
+    branches: [feat/reproducible-layers]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [splunk, splunk-slim, universalforwarder]
+    uses: ./.github/workflows/build-image.yml
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+      artifact-metadata: write
+    with:
+      variant: ${{ matrix.variant }}
+      versions: '[{"version":"10.6.1.1","build":"b2ae2962645c","platform":"linux-amd64"}]'
+      image_name: sondreomar/splunk-devcontainer-test
+      image_version: 0.0.1
+      image_major: "0"
+      image_minor: "0.0"
+      splunk_latest: 10.6.1.1
+      splunk_major: '{"10.6.1.1":"10"}'
+      splunk_minor: '{"10.6.1.1":"10.6"}'
+      splunk_patch: '{"10.6.1.1":"10.6.1"}'
+      push: true

@@ -54,10 +54,15 @@ on:
         required: false
         type: number
         default: 15
+      image_name:
+        description: "Image name in the registry (defaults to the repository), e.g. to test pushing to another package"
+        required: false
+        type: string
+        default: ""
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  IMAGE_NAME: ${{ inputs.image_name || github.repository }}
 
 jobs:
   setup:
