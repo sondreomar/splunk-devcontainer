@@ -43,7 +43,7 @@ Splunk 10.6.1.1, measured with the [benchmark workflow](./.github/workflows/benc
 | `splunk/universalforwarder` | 320 MB   | 1005 MB  | 24.2 s      | 18.9 s  | 0.2 %    | 74 MB   |
 | `splunk-devcontainer` uf    | 369 MB   | 918 MB   | 6.9 s       | 2.1 s   | 0.0 %    | 72 MB   |
 
-Start and restart times are until Splunk is ready: the management API answers, Splunk Web serves the login page (Enterprise only), and for the official images Ansible has finished. Memory is the memory Splunk allocated (anonymous memory, without file cache). Each container was limited to 4 CPUs and 6 GB of memory. The official images run Ansible to configure Splunk on every start, including restarts.
+Start and restart times are until Splunk is ready: for Enterprise, the management API answers and Splunk Web serves the login page; for the forwarder, `splunk list forward-server` answers, since it has no management port by default; and for the official images, Ansible has finished. Memory is the memory Splunk allocated (anonymous memory, without file cache). Each container was limited to 4 CPUs and 6 GB of memory. The official images run Ansible to configure Splunk on every start, including restarts.
 
 ## Image Tags
 
