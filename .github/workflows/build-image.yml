@@ -54,10 +54,15 @@ on:
         required: false
         type: number
         default: 15
+      image_name:
+        description: "Image name in the registry (defaults to the repository), e.g. to test pushing to another package"
+        required: false
+        type: string
+        default: ""
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  IMAGE_NAME: ${{ inputs.image_name || github.repository }}
 
 jobs:
   setup:
@@ -136,6 +141,26 @@ jobs:
 
       - name: Dev Container CLI
         run: npm install -g @devcontainers/cli@0.80.0
+
+      # Caps layer timestamps, so a layer whose contents didn't change keeps its digest across releases
+      - name: Release date
+        env:
+          WORKSPACE: ${{ needs.setup.outputs.workspace }}
+          SPLUNK_VERSION: ${{ matrix.version }}
+          SPLUNK_BUILD: ${{ matrix.build }}
+          SPLUNK_PLATFORM: ${{ matrix.platform }}
+        run: |
+          case "$WORKSPACE" in
+            splunk) product=splunk package=splunk ;;
+            universalforwarder) product=universalforwarder package=splunkforwarder ;;
+          esac
+          url="https://download.splunk.com/products/$product/releases/$SPLUNK_VERSION/linux/$package-$SPLUNK_VERSION-$SPLUNK_BUILD-$SPLUNK_PLATFORM.tgz"
+          modified=$(curl -sfI "$url" | sed -n 's/^last-modified: *//Ip' | tr -d '\r')
+          if [[ -z "$modified" ]] || ! epoch=$(date -d "$modified" +%s); then
+            echo "::error::Couldn't read the release date of $url"
+            exit 1
+          fi
+          echo "SOURCE_DATE_EPOCH=$epoch" >> "$GITHUB_ENV"
 
       - name: Build
         env:
@@ -301,11 +326,26 @@ jobs:
         if: inputs.push
         id: push
         env:
+          WORKSPACE: ${{ needs.setup.outputs.workspace }}
+          SPLUNK_SLIM: ${{ needs.setup.outputs.slim }}
+          SPLUNK_VERSION: ${{ matrix.version }}
+          SPLUNK_BUILD: ${{ matrix.build }}
+          SPLUNK_PLATFORM: ${{ matrix.platform }}
           IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           VERSION_TAG: ${{ matrix.version }}${{ needs.setup.outputs.suffix }}
+          # Provenance is attested separately, and keeping it out keeps the image a single manifest
+          BUILDX_NO_DEFAULT_ATTESTATIONS: 1
         run: |
-          docker push --all-tags $IMAGE_REF
-          digest=$(docker inspect --format='{{index .RepoDigests 0}}' "$IMAGE_REF:$VERSION_TAG" | cut -d@ -f2)
+          # Rebuilt from the cache, as only buildx can rewrite the layer timestamps when pushing
+          tags=()
+          for tag in $(docker image ls --format '{{.Repository}}:{{.Tag}}' "$IMAGE_REF"); do
+            tags+=(--image-name "$tag")
+          done
+          devcontainer build \
+            --workspace-folder $GITHUB_WORKSPACE/src/$WORKSPACE \
+            "${tags[@]}" \
+            --output type=image,push=true,rewrite-timestamp=true
+          digest=$(docker buildx imagetools inspect "$IMAGE_REF:$VERSION_TAG" --format '{{json .Manifest}}' | jq -r .digest)
           echo "digest=$digest" >> $GITHUB_OUTPUT
 
       - name: Attest
