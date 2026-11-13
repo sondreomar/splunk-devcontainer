@@ -31,6 +31,20 @@ The image can also be extended with additional devcontainer features, for exampl
 
 The slim image leaves out the apps and supervisor sidecar packages listed in [splunk_exclude](./src/splunk/.devcontainer/splunk_exclude) to reduce the image size and the memory and CPU used at runtime. It removes them from Splunk's manifest so the file integrity check doesn't report them as missing. The excluded sidecars are Spotlight, OpAMP, Edge Processor, Metadata Catalog and Topology. The KV store (PostgreSQL), SPL2 preview (SPL2 in search, from 10.4) and Agent Management sidecars are kept. Edge Processor is left out entirely, including the Data Management app that links to it.
 
+## Compared to Splunk's Official Images
+
+Splunk 10.6.1.1, measured with the [benchmark workflow](./.github/workflows/benchmark.yml) on a GitHub-hosted runner ([run](https://github.com/sondreomar/splunk-devcontainer/actions/runs/43339905407), image version v2.1.1). Startup times are the median of 5 runs. Idle CPU and memory were sampled for 5 minutes, with every image running at once after 3 minutes to settle.
+
+| Image                       | Download | Unpacked | First start | Restart | Idle CPU | Memory  |
+| --------------------------- | -------: | -------: | ----------: | ------: | -------: | ------: |
+| `splunk/splunk`             | 1926 MB  | 4735 MB  | 48.7 s      | 36.0 s  | 12.1 %   | 659 MB  |
+| `splunk-devcontainer`       | 1992 MB  | 4694 MB  | 21.9 s      | 11.0 s  | 12.1 %   | 656 MB  |
+| `splunk-devcontainer` slim  | 1314 MB  | 3491 MB  | 9.9 s       | 5.0 s   | 3.6 %    | 474 MB  |
+| `splunk/universalforwarder` | 320 MB   | 1005 MB  | 24.2 s      | 18.9 s  | 0.2 %    | 74 MB   |
+| `splunk-devcontainer` uf    | 369 MB   | 918 MB   | 6.9 s       | 2.1 s   | 0.0 %    | 72 MB   |
+
+Start and restart times are until Splunk is ready: for Enterprise, the management API answers and Splunk Web serves the login page; for the forwarder, `splunk list forward-server` answers, since it has no management port by default; and for the official images, Ansible has finished. Memory is the memory Splunk allocated (anonymous memory, without file cache). Each container was limited to 4 CPUs and 6 GB of memory. The official images run Ansible to configure Splunk on every start, including restarts.
+
 ## Image Tags
 
 Images are tagged with both the Splunk version and the devcontainer image version. This allows you to pin to a specific Splunk version while also controlling devcontainer updates.
