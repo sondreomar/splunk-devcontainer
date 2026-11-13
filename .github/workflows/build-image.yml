@@ -151,11 +151,11 @@ jobs:
           esac
           url="https://download.splunk.com/products/$product/releases/$SPLUNK_VERSION/linux/$package-$SPLUNK_VERSION-$SPLUNK_BUILD-$SPLUNK_PLATFORM.tgz"
           modified=$(curl -sfI "$url" | sed -n 's/^last-modified: *//Ip' | tr -d '\r')
-          if [[ -z "$modified" ]]; then
+          if [[ -z "$modified" ]] || ! epoch=$(date -d "$modified" +%s); then
             echo "::error::Couldn't read the release date of $url"
             exit 1
           fi
-          echo "SOURCE_DATE_EPOCH=$(date -d "$modified" +%s)" >> "$GITHUB_ENV"
+          echo "SOURCE_DATE_EPOCH=$epoch" >> "$GITHUB_ENV"
 
       - name: Build
         env:
